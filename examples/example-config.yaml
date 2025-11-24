@@ -1,0 +1,6 @@
+# Example configuration for IntelligensiDeploy
+provider: lambda-gpu
+workload: image-server
+resources:
+  gpu: A100
+  replicas: 1
