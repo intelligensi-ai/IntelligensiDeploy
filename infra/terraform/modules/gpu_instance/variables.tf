@@ -1,3 +1,19 @@
-# Input variables for GPU instance module.
+variable "gpu_type" {
+  description = "Identifier for the GPU instance type."
+  type        = string
+}
 
-# Variables will be defined in Phase 4.
+variable "disk_size" {
+  description = "Disk size allocated to the instance in GB."
+  type        = number
+}
+
+variable "region" {
+  description = "Region used to contextualize the instance metadata."
+  type        = string
+}
+
+variable "instance_name" {
+  description = "Human readable name for the GPU instance."
+  type        = string
+}
