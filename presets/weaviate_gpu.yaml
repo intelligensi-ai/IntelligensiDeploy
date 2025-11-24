@@ -1,0 +1,5 @@
+# Preset configuration placeholder for the Weaviate GPU deployment.
+version: "0.0.0"
+metadata:
+  description: "Phase 3 stub for Weaviate GPU"
+settings: {}

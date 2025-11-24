@@ -1,0 +1,5 @@
+# Preset configuration placeholder for the flux image server deployment.
+version: "0.0.0"
+metadata:
+  description: "Phase 3 stub for flux image server"
+settings: {}
