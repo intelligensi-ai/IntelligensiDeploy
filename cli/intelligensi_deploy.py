@@ -8,10 +8,15 @@ import os
 from pathlib import Path
 from typing import List, Optional
 
+import typer
+
 from agent.agent_adapter import AgentAdapter
 from core.state_machine import StateMachine, StateTransitionError
+from intelligensi_deploy.agent.auto_fix_suggester import suggest_fixes
 from intelligensi_deploy.validators.docker_validator import validate_dockerfile
 from intelligensi_deploy.validators.service_validator import validate_service
+
+app = typer.Typer()
 
 
 def _build_state_machine() -> StateMachine:
@@ -95,6 +100,49 @@ def validate(service: str) -> None:
     print("Service is ready for deployment.")
 
 
+@app.command("validate-agent")
+def validate_agent(service: str):
+    """Validate a service with agentic auto-fix suggestions."""
+    service_path = os.path.join("services", service)
+    print(f"\n🔍 Agentic Validation: {service}")
+
+    errors = []
+    errors.extend(validate_service(service_path))
+    errors.extend(validate_dockerfile(os.path.join(service_path, "Dockerfile")))
+
+    if not errors:
+        print("\n✅ VALIDATION PASSED — No fixes required.")
+        return
+
+    print("\n❌ VALIDATION FAILED — Issues detected:")
+    for e in errors:
+        print(" -", e)
+
+    print("\n🤖 Suggested Fixes:")
+    fixes = suggest_fixes(errors)
+    for f in fixes:
+        print("   ", f)
+
+    # Ask user if they want auto-patch generation
+    choice = input("\nWould you like Codex to generate the required patches? (y/n): ").strip().lower()
+
+    if choice == "y":
+        print("\n🛠  Generating patch instructions…")
+        print("Paste this into Codex:\n")
+        print("-------- BEGIN PATCH INSTRUCTIONS --------")
+
+        for e in errors:
+            print(f"# Fix for: {e}")
+            print("# TODO: Insert fix here. Codex will fill it based on context.")
+            print()
+
+        print("-------- END PATCH INSTRUCTIONS --------\n")
+        print("⚡ Paste that into Codex and apply. Then re-run:")
+        print(f"    python3 cli/intelligensi_deploy.py validate-agent {service}")
+    else:
+        print("\n🚫 No patches generated. Fix manually or re-run validate-agent.")
+
+
 def parse_arguments(argv: Optional[List[str]] = None) -> argparse.Namespace:
     """Build the CLI argument parser."""
 
@@ -135,6 +183,11 @@ def parse_arguments(argv: Optional[List[str]] = None) -> argparse.Namespace:
     validate_parser = subcommands.add_parser("validate", help="Validate a service before deployment")
     validate_parser.add_argument("service", help="Service name to validate")
 
+    validate_agent_parser = subcommands.add_parser(
+        "validate-agent", help="Validate a service with agentic suggestions"
+    )
+    validate_agent_parser.add_argument("service", help="Service name to validate")
+
     return parser.parse_args(argv)
 
 
@@ -157,6 +210,8 @@ def main(argv: Optional[List[str]] = None) -> None:
             print(preset)
     elif args.command == "validate":
         validate(args.service)
+    elif args.command == "validate-agent":
+        validate_agent(args.service)
 
 
 if __name__ == "__main__":
