@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 from pathlib import Path
 from typing import List, Optional
 
 from agent.agent_adapter import AgentAdapter
 from core.state_machine import StateMachine, StateTransitionError
+from intelligensi_deploy.validators.docker_validator import validate_dockerfile
+from intelligensi_deploy.validators.service_validator import validate_service
 
 
 def _build_state_machine() -> StateMachine:
@@ -71,6 +74,27 @@ def list_presets(presets_dir: Path) -> List[str]:
     return [preset.stem for preset in presets_dir.glob("*.yaml")]
 
 
+def validate(service: str) -> None:
+    """Validate a service before deployment."""
+
+    service_path = os.path.join("services", service)
+
+    print(f"Validating service: {service_path}")
+
+    errors: List[str] = []
+    errors.extend(validate_service(service_path))
+    errors.extend(validate_dockerfile(os.path.join(service_path, "Dockerfile")))
+
+    if errors:
+        print("\n❌ VALIDATION FAILED:")
+        for error in errors:
+            print(" -", error)
+        raise SystemExit(1)
+
+    print("\n✅ VALIDATION PASSED")
+    print("Service is ready for deployment.")
+
+
 def parse_arguments(argv: Optional[List[str]] = None) -> argparse.Namespace:
     """Build the CLI argument parser."""
 
@@ -108,6 +132,9 @@ def parse_arguments(argv: Optional[List[str]] = None) -> argparse.Namespace:
 
     subcommands.add_parser("list-presets", help="List available presets")
 
+    validate_parser = subcommands.add_parser("validate", help="Validate a service before deployment")
+    validate_parser.add_argument("service", help="Service name to validate")
+
     return parser.parse_args(argv)
 
 
@@ -128,6 +155,8 @@ def main(argv: Optional[List[str]] = None) -> None:
     elif args.command == "list-presets":
         for preset in list_presets(Path("presets")):
             print(preset)
+    elif args.command == "validate":
+        validate(args.service)
 
 
 if __name__ == "__main__":
