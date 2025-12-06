@@ -1,35 +1,40 @@
-"""
-Converts validator errors into human-readable fixes and optional patch instructions.
-"""
+"""Auto-fix suggester module for deployment issues."""
+
+from typing import List
 
 
-def suggest_fixes(errors: list[str]) -> list[str]:
-    suggestions = []
+def suggest_fixes(service: str, issues: List[str]) -> List[str]:
+    """Suggest fixes for deployment issues.
 
-    for e in errors:
+    Args:
+        service: Service name being validated
+        issues: List of issues found during validation
 
-        # Missing required files
-        if "Missing required file:" in e:
-            missing = e.split(":")[1].strip()
-            suggestions.append(
-                f"• Create `{missing}` in the service folder. "
-                f"Example placeholder will be generated if you choose auto-fix."
-            )
+    Returns:
+        List of suggested fixes
+    """
+    # TODO: Implement actual fix suggestions based on issue analysis
+    fixes: List[str] = []
 
-        # deploy_config errors
-        if "deploy_config.yaml" in e:
-            suggestions.append(
-                "• Check deploy_config.yaml format. Ensure keys: service_name, docker, resources."
-            )
+    for issue in issues:
+        if "folder not found" in issue.lower():
+            fixes.append(f"Create the service directory: mkdir -p services/{service}")
+        elif "dockerfile missing" in issue.lower():
+            fixes.append(f"Create a Dockerfile in services/{service}/Dockerfile")
+        elif "port" in issue.lower():
+            fixes.append("Check port configuration in service manifest")
+        elif "environment" in issue.lower():
+            fixes.append("Verify environment variables are properly set")
+        else:
+            fixes.append(f"Review and fix: {issue}")
 
-        # Dockerfile errors
-        if "Dockerfile missing FROM" in e:
-            suggestions.append("• Add a FROM line, e.g. FROM nvidia/cuda:12.8.0-base-ubuntu22.04")
+    if not fixes:
+        fixes = [
+            "Check service configuration",
+            "Verify Docker image build",
+            "Review deployment logs",
+            "Validate network connectivity",
+        ]
 
-        if "CMD" in e:
-            suggestions.append("• Add a CMD or ENTRYPOINT to the Dockerfile.")
+    return fixes
 
-    if not suggestions:
-        suggestions.append("• No auto-fix suggestions available.")
-
-    return suggestions

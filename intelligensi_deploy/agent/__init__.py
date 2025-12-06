@@ -1,1 +1,2 @@
-"""Agent utilities for Intelligensi Deploy."""
+"""Agent module for IntelligensiDeploy."""
+

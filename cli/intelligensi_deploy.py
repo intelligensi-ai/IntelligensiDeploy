@@ -8,12 +8,15 @@ import sys
 from pathlib import Path
 from typing import List, Optional
 
-ROOT_DIR = Path(__file__).resolve().parent.parent
-if str(ROOT_DIR) not in sys.path:
-    sys.path.insert(0, str(ROOT_DIR))
+# Add the repo root to Python path so intelligensi_deploy package can be found
+repo_root = Path(__file__).parent.parent
+if str(repo_root) not in sys.path:
+    sys.path.insert(0, str(repo_root))
 
 from deploy.workflow import DeploymentError, deploy_preset, shutdown_preset, status_preset
 from presets.loader import PresetValidationError, load_presets
+
+from intelligensi_deploy.agent.auto_fix_suggester import suggest_fixes
 
 
 def deploy(preset: str) -> None:
@@ -33,6 +36,13 @@ def status(preset: str) -> str:
         return status_preset(preset)
     except DeploymentError as exc:
         return f"Status check failed: {exc}"
+
+
+def logs(limit: int = 100) -> List[str]:
+    """Retrieve recent deployment logs."""
+
+    # TODO: Implement log retrieval without AgentAdapter
+    return ["No logs available yet"]
 
 
 def shutdown(preset: str) -> None:
@@ -75,51 +85,36 @@ def validate(service: str) -> None:
     print("Service is ready for deployment.")
 
 
-def validate_agent(service: str):
-    """Validate a service with agentic auto-fix suggestions."""
+def validate_agent(service: str) -> None:
+    """Run AI-driven validation using the auto-fix suggester."""
 
-    from intelligensi_deploy.agent.auto_fix_suggester import suggest_fixes
-    from intelligensi_deploy.validators.docker_validator import validate_dockerfile
-    from intelligensi_deploy.validators.service_validator import validate_service
+    print(f"Running agentic validator on service: {service}\n")
 
+    # Run the normal validation first
+    issues: List[str] = []
+
+    print("🔍 Checking service structure...")
     service_path = os.path.join("services", service)
-    print(f"\n🔍 Agentic Validation: {service}")
+    issues.extend(validate_service(service_path))
 
-    errors = []
-    errors.extend(validate_service(service_path))
-    errors.extend(validate_dockerfile(os.path.join(service_path, "Dockerfile")))
+    print("🔍 Checking Dockerfile...")
+    dockerfile_path = os.path.join(service_path, "Dockerfile")
+    issues.extend(validate_dockerfile(dockerfile_path))
 
-    if not errors:
-        print("\n✅ VALIDATION PASSED — No fixes required.")
+    if not issues:
+        print("✅ No issues found. Service is clean!")
         return
 
-    print("\n❌ VALIDATION FAILED — Issues detected:")
-    for e in errors:
-        print(" -", e)
+    print("\n❗ Issues found:")
+    for issue in issues:
+        print(f" - {issue}")
 
-    print("\n🤖 Suggested Fixes:")
-    fixes = suggest_fixes(errors)
-    for f in fixes:
-        print("   ", f)
+    print("\n🤖 Agent is analysing...")
+    fixes = suggest_fixes(service, issues)
 
-    # Ask user if they want auto-patch generation
-    choice = input("\nWould you like Codex to generate the required patches? (y/n): ").strip().lower()
-
-    if choice == "y":
-        print("\n🛠  Generating patch instructions…")
-        print("Paste this into Codex:\n")
-        print("-------- BEGIN PATCH INSTRUCTIONS --------")
-
-        for e in errors:
-            print(f"# Fix for: {e}")
-            print("# TODO: Insert fix here. Codex will fill it based on context.")
-            print()
-
-        print("-------- END PATCH INSTRUCTIONS --------\n")
-        print("⚡ Paste that into Codex and apply. Then re-run:")
-        print(f"    python3 cli/intelligensi_deploy.py validate-agent {service}")
-    else:
-        print("\n🚫 No patches generated. Fix manually or re-run validate-agent.")
+    print("\n💡 Suggested Fixes:")
+    for fix in fixes:
+        print(f" - {fix}")
 
 
 def parse_arguments(argv: Optional[List[str]] = None) -> argparse.Namespace:
@@ -142,9 +137,7 @@ def parse_arguments(argv: Optional[List[str]] = None) -> argparse.Namespace:
     validate_parser = subcommands.add_parser("validate", help="Validate a service before deployment")
     validate_parser.add_argument("service", help="Service name to validate")
 
-    validate_agent_parser = subcommands.add_parser(
-        "validate-agent", help="Validate a service with agentic suggestions"
-    )
+    validate_agent_parser = subcommands.add_parser("validate-agent", help="Run AI-driven validation with fix suggestions")
     validate_agent_parser.add_argument("service", help="Service name to validate")
 
     return parser.parse_args(argv)
