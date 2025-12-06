@@ -3,74 +3,46 @@
 from __future__ import annotations
 
 import argparse
-import logging
 import os
+import sys
 from pathlib import Path
 from typing import List, Optional
 
-import typer
+ROOT_DIR = Path(__file__).resolve().parent.parent
+if str(ROOT_DIR) not in sys.path:
+    sys.path.insert(0, str(ROOT_DIR))
 
-from agent.agent_adapter import AgentAdapter
-from core.state_machine import StateMachine, StateTransitionError
-from intelligensi_deploy.agent.auto_fix_suggester import suggest_fixes
-from intelligensi_deploy.validators.docker_validator import validate_dockerfile
-from intelligensi_deploy.validators.service_validator import validate_service
-
-app = typer.Typer()
+from deploy.workflow import DeploymentError, deploy_preset, shutdown_preset, status_preset
+from presets.loader import PresetValidationError, load_presets
 
 
-def _build_state_machine() -> StateMachine:
-    """Create a state machine with a simple event logger."""
-
-    logger = logging.getLogger("intelligensi.cli")
-    logger.addHandler(logging.StreamHandler())
-    logger.setLevel(logging.INFO)
-    return StateMachine(logger=logger)
-
-
-def deploy(preset: str, terraform_dir: Path, context_path: Optional[Path]) -> None:
+def deploy(preset: str) -> None:
     """Execute a deployment flow for a preset."""
 
-    state = _build_state_machine()
     try:
-        state.transition("planning", {"preset": preset})
-        state.transition("provisioning")
-        state.run_terraform("init", terraform_dir)
-        state.run_terraform("apply", terraform_dir, extra_args=["-auto-approve"])
-        state.transition("building")
-        state.build_container_image(preset=preset, context_path=context_path)
-        state.transition("deploying")
-        state.transition("verifying")
-        state.transition("running")
-    except Exception as exc:
-        try:
-            state.transition("error", {"reason": str(exc)})
-        except StateTransitionError:
-            pass
-        raise
+        state = deploy_preset(preset)
+        print(f"🚀 Deployed {preset} to {state.ip} (instance_id={state.instance_id})")
+    except DeploymentError as exc:
+        raise SystemExit(f"Deployment failed: {exc}")
 
 
-def status() -> str:
+def status(preset: str) -> str:
     """Return the current deployment status."""
 
-    adapter = AgentAdapter(agent_id="cli-status")
-    return adapter.get_state() or "unknown"
+    try:
+        return status_preset(preset)
+    except DeploymentError as exc:
+        return f"Status check failed: {exc}"
 
 
-def logs(limit: int = 100) -> List[str]:
-    """Retrieve recent deployment logs."""
-
-    adapter = AgentAdapter(agent_id="cli-logs")
-    return adapter.get_logs(limit=limit)
-
-
-def shutdown(terraform_dir: Path) -> None:
+def shutdown(preset: str) -> None:
     """Tear down infrastructure and reset state."""
 
-    state = _build_state_machine()
-    state.transition("shutdown")
-    state.run_terraform("destroy", terraform_dir, extra_args=["-auto-approve"])
-    state.reset()
+    try:
+        shutdown_preset(preset)
+        print(f"✅ Shutdown requested for preset '{preset}'")
+    except DeploymentError as exc:
+        raise SystemExit(f"Shutdown failed: {exc}")
 
 
 def list_presets(presets_dir: Path) -> List[str]:
@@ -82,13 +54,16 @@ def list_presets(presets_dir: Path) -> List[str]:
 def validate(service: str) -> None:
     """Validate a service before deployment."""
 
-    service_path = os.path.join("services", service)
+    from intelligensi_deploy.validators.docker_validator import validate_dockerfile
+    from intelligensi_deploy.validators.service_validator import validate_service
+
+    service_path = Path("services") / service
 
     print(f"Validating service: {service_path}")
 
     errors: List[str] = []
-    errors.extend(validate_service(service_path))
-    errors.extend(validate_dockerfile(os.path.join(service_path, "Dockerfile")))
+    errors.extend(validate_service(str(service_path)))
+    errors.extend(validate_dockerfile(str(service_path / "Dockerfile")))
 
     if errors:
         print("\n❌ VALIDATION FAILED:")
@@ -100,9 +75,13 @@ def validate(service: str) -> None:
     print("Service is ready for deployment.")
 
 
-@app.command("validate-agent")
 def validate_agent(service: str):
     """Validate a service with agentic auto-fix suggestions."""
+
+    from intelligensi_deploy.agent.auto_fix_suggester import suggest_fixes
+    from intelligensi_deploy.validators.docker_validator import validate_dockerfile
+    from intelligensi_deploy.validators.service_validator import validate_service
+
     service_path = os.path.join("services", service)
     print(f"\n🔍 Agentic Validation: {service}")
 
@@ -151,32 +130,12 @@ def parse_arguments(argv: Optional[List[str]] = None) -> argparse.Namespace:
 
     deploy_parser = subcommands.add_parser("deploy", help="Deploy a preset")
     deploy_parser.add_argument("preset", help="Name of the preset to deploy")
-    deploy_parser.add_argument(
-        "--terraform-dir",
-        type=Path,
-        default=Path("infra/terraform"),
-        help="Terraform working directory",
-    )
-    deploy_parser.add_argument(
-        "--context-path",
-        type=Path,
-        default=None,
-        help="Docker build context override",
-    )
 
     status_parser = subcommands.add_parser("status", help="Show deployment status")
-    status_parser.set_defaults()
-
-    logs_parser = subcommands.add_parser("logs", help="Show recent logs")
-    logs_parser.add_argument("--limit", type=int, default=100, help="Number of log lines to display")
+    status_parser.add_argument("preset", help="Name of the preset to query")
 
     shutdown_parser = subcommands.add_parser("shutdown", help="Destroy resources")
-    shutdown_parser.add_argument(
-        "--terraform-dir",
-        type=Path,
-        default=Path("infra/terraform"),
-        help="Terraform working directory",
-    )
+    shutdown_parser.add_argument("preset", help="Name of the preset to destroy")
 
     subcommands.add_parser("list-presets", help="List available presets")
 
@@ -197,14 +156,11 @@ def main(argv: Optional[List[str]] = None) -> None:
     args = parse_arguments(argv)
 
     if args.command == "deploy":
-        deploy(args.preset, args.terraform_dir, args.context_path)
+        deploy(args.preset)
     elif args.command == "status":
-        print(status())
-    elif args.command == "logs":
-        for line in logs(limit=args.limit):
-            print(line)
+        print(status(args.preset))
     elif args.command == "shutdown":
-        shutdown(args.terraform_dir)
+        shutdown(args.preset)
     elif args.command == "list-presets":
         for preset in list_presets(Path("presets")):
             print(preset)
