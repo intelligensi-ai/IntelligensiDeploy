@@ -37,11 +37,14 @@ class LambdaClient:
         self.user_agent = user_agent
 
     def _request(self, method: str, path: str, payload: Optional[Dict] = None) -> Dict:
+        # Normalise path to avoid missing or duplicate slashes
+        if not path.startswith("/"):
+            path = "/" + path
         url = f"{API_BASE}{path}"
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
-            "User-Agent": self.user_agent,
+            "User-Agent": "IntelligensiDeploy/1.0 (+https://intelligensi.ai)",
         }
         data = json.dumps(payload).encode() if payload else None
         req = request.Request(url, data=data, headers=headers, method=method)
