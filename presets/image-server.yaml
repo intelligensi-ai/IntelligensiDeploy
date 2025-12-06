@@ -14,8 +14,8 @@ health_path: /health
 lambda_api_key: ${LAMBDALABS_API_KEY}
 
 # SSH configuration
-ssh_key_name: lambda-key
-ssh_private_key_path: ~/.ssh/lambda_key.pem
+ssh_key_name: intelligensi-lambda
+ssh_private_key_path: ~/.ssh/intelligensi_lambda
 ssh_username: ubuntu
 
 env:

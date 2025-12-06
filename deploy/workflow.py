@@ -82,6 +82,8 @@ def _ssh(ip: str, key_path: str, user: str, command: str, retries: int = 20, del
         "StrictHostKeyChecking=no",
         "-o",
         "UserKnownHostsFile=/dev/null",
+        "-o",
+        "ConnectTimeout=5",
         "-i",
         key_path,
         f"{user}@{ip}",
@@ -94,10 +96,16 @@ def _ssh(ip: str, key_path: str, user: str, command: str, retries: int = 20, del
         if process.returncode == 0:
             return
 
-        print(f"[SSH] Attempt {attempt}/{retries} failed ({(process.stderr or process.stdout).strip()}), retrying in {delay}s...")
+        print(
+            f"[SSH] Attempt {attempt}/{retries} failed "
+            f"({process.stderr.strip() or process.stdout.strip()}), retrying in {delay}s..."
+        )
         time.sleep(delay)
 
-    raise DeploymentError(f"SSH failed after {retries} attempts: {process.stderr or process.stdout}")
+    raise DeploymentError(
+        f"SSH failed after {retries} attempts: "
+        f"{process.stderr or process.stdout}"
+    )
 
 
 def _build_env_flags(env: Dict[str, str]) -> str:
