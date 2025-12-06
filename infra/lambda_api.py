@@ -9,6 +9,7 @@ from typing import Dict, Optional
 from urllib import error, request
 
 API_BASE = "https://cloud.lambdalabs.com/api/v1"
+DEFAULT_USER_AGENT = "intelligensi-deploy/1.0"
 DEFAULT_REGION = "us-east-1"
 
 
@@ -30,9 +31,10 @@ class Instance:
 class LambdaClient:
     """Tiny wrapper around the Lambda Labs HTTP API."""
 
-    def __init__(self, api_key: str, region: str = DEFAULT_REGION):
+    def __init__(self, api_key: str, region: str = DEFAULT_REGION, user_agent: str = DEFAULT_USER_AGENT):
         self.api_key = api_key
         self.region = region or DEFAULT_REGION
+        self.user_agent = user_agent
 
     def _request(self, method: str, path: str, payload: Optional[Dict] = None) -> Dict:
         # Normalise path to avoid missing or duplicate slashes
@@ -59,17 +61,22 @@ class LambdaClient:
         self,
         instance_type: str,
         ssh_key_name: str,
-        name: str = "image-server",
+        instance_name: Optional[str] = None,
     ) -> Instance:
         payload = {
             "region_name": self.region,
             "instance_type_name": instance_type,
             "quantity": 1,
-            "name": name,
             "ssh_key_names": [ssh_key_name],
         }
-        data = self._request("POST", "/instances", payload)
-        instances = data.get("data", {}).get("instances") or []
+        if instance_name:
+            payload["name"] = instance_name
+
+        data = self._request("POST", "/instance-operations", payload)
+        instances = (
+            data.get("data", {}).get("instances")
+            or data.get("data", {}).get("resources", {}).get("instances", [])
+        )
         if not instances:
             raise LambdaAPIError("Lambda API did not return an instance identifier")
         inst = instances[0]
