@@ -75,21 +75,37 @@ def _write_states(states: Dict[str, DeploymentState]) -> None:
     save_state(STATE_FILE, payload)
 
 
-def _ssh(ip: str, key_path: str, user: str, command: str) -> None:
+def _ssh(ip: str, key_path: str, user: str, command: str, retries: int = 20, delay: int = 5) -> None:
     ssh_cmd = [
         "ssh",
         "-o",
         "StrictHostKeyChecking=no",
         "-o",
         "UserKnownHostsFile=/dev/null",
+        "-o",
+        "ConnectTimeout=5",
         "-i",
         key_path,
         f"{user}@{ip}",
         command,
     ]
-    process = subprocess.run(ssh_cmd, capture_output=True, text=True)
-    if process.returncode != 0:
-        raise DeploymentError(f"SSH command failed: {process.stderr or process.stdout}")
+
+    for attempt in range(1, retries + 1):
+        process = subprocess.run(ssh_cmd, capture_output=True, text=True)
+
+        if process.returncode == 0:
+            return
+
+        print(
+            f"[SSH] Attempt {attempt}/{retries} failed "
+            f"({process.stderr.strip() or process.stdout.strip()}), retrying in {delay}s..."
+        )
+        time.sleep(delay)
+
+    raise DeploymentError(
+        f"SSH failed after {retries} attempts: "
+        f"{process.stderr or process.stdout}"
+    )
 
 
 def _build_env_flags(env: Dict[str, str]) -> str:
