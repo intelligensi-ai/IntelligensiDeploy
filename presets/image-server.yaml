@@ -1,13 +1,23 @@
 # Minimal preset for deploying the Flux Schnell image server to Lambda Labs
+
+name: image-server
+
 instance_type: gpu_1x_a10
 region: us-east-1
+
 docker_image: your-docker-user/intelligensi-image-server:latest
+
 port: 8080
 health_path: /health
-# Optional: API key and SSH details can also be provided via environment variables
-lambda_api_key: ${LAMBDA_API_KEY}
-ssh_key_name: default
-ssh_private_key_path: ~/.ssh/id_rsa
+
+# Environment variables (secure)
+lambda_api_key: ${LAMBDALABS_API_KEY}
+
+# SSH configuration
+ssh_key_name: lambda-key
+ssh_private_key_path: ~/.ssh/lambda_key.pem
 ssh_username: ubuntu
+
 env:
   HF_HUB_ENABLE_HF_TRANSFER: "1"
+  MODEL_ID: "black-forest-labs/FLUX.1-schnell"
