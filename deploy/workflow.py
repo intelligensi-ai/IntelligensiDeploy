@@ -120,8 +120,47 @@ def _bootstrap_remote(preset: Preset, state: DeploymentState) -> None:
     if not key_path:
         raise DeploymentError("ssh_private_key_path is required")
 
-    install_cmd = "sudo apt-get update -y && sudo apt-get install -y docker.io"
-    _ssh(state.ip, key_path, preset.ssh_username, install_cmd)
+    # --- PATCHED DOCKER INSTALLATION ---
+    # Remove old conflicting packages
+    remove_old = (
+        "sudo apt-get remove -y docker docker-engine docker.io containerd runc || true"
+    )
+    _ssh(state.ip, key_path, preset.ssh_username, remove_old)
+
+    # Update apt and install dependencies
+    prep_install = (
+        "sudo apt-get update -y && "
+        "sudo apt-get install -y ca-certificates curl gnupg lsb-release"
+    )
+    _ssh(state.ip, key_path, preset.ssh_username, prep_install)
+
+    # Add Docker GPG key
+    add_key = (
+        "sudo mkdir -m 0755 -p /etc/apt/keyrings && "
+        "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | "
+        "sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg"
+    )
+    _ssh(state.ip, key_path, preset.ssh_username, add_key)
+
+    # Add Docker repository
+    add_repo = (
+        'echo "deb [arch=$(dpkg --print-architecture) '
+        'signed-by=/etc/apt/keyrings/docker.gpg] '
+        'https://download.docker.com/linux/ubuntu '
+        '$(lsb_release -cs) stable" | '
+        'sudo tee /etc/apt/sources.list.d/docker.list > /dev/null'
+    )
+    _ssh(state.ip, key_path, preset.ssh_username, add_repo)
+
+    # Install Docker from official source
+    install_docker = (
+        "sudo apt-get update -y && "
+        "sudo apt-get install -y docker-ce docker-ce-cli containerd.io "
+        "docker-buildx-plugin docker-compose-plugin"
+    )
+    _ssh(state.ip, key_path, preset.ssh_username, install_docker)
+
+    # Enable Docker
     _ssh(state.ip, key_path, preset.ssh_username, "sudo systemctl enable --now docker")
 
     env_flags = _build_env_flags(preset.env)
