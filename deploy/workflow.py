@@ -75,7 +75,7 @@ def _write_states(states: Dict[str, DeploymentState]) -> None:
     save_state(STATE_FILE, payload)
 
 
-def _ssh(ip: str, key_path: str, user: str, command: str) -> None:
+def _ssh(ip: str, key_path: str, user: str, command: str, retries: int = 20, delay: int = 5) -> None:
     ssh_cmd = [
         "ssh",
         "-o",
@@ -87,9 +87,17 @@ def _ssh(ip: str, key_path: str, user: str, command: str) -> None:
         f"{user}@{ip}",
         command,
     ]
-    process = subprocess.run(ssh_cmd, capture_output=True, text=True)
-    if process.returncode != 0:
-        raise DeploymentError(f"SSH command failed: {process.stderr or process.stdout}")
+
+    for attempt in range(1, retries + 1):
+        process = subprocess.run(ssh_cmd, capture_output=True, text=True)
+
+        if process.returncode == 0:
+            return
+
+        print(f"[SSH] Attempt {attempt}/{retries} failed ({(process.stderr or process.stdout).strip()}), retrying in {delay}s...")
+        time.sleep(delay)
+
+    raise DeploymentError(f"SSH failed after {retries} attempts: {process.stderr or process.stdout}")
 
 
 def _build_env_flags(env: Dict[str, str]) -> str:
@@ -104,8 +112,47 @@ def _bootstrap_remote(preset: Preset, state: DeploymentState) -> None:
     if not key_path:
         raise DeploymentError("ssh_private_key_path is required")
 
-    install_cmd = "sudo apt-get update -y && sudo apt-get install -y docker.io"
-    _ssh(state.ip, key_path, preset.ssh_username, install_cmd)
+    # --- PATCHED DOCKER INSTALLATION ---
+    # Remove old conflicting packages
+    remove_old = (
+        "sudo apt-get remove -y docker docker-engine docker.io containerd runc || true"
+    )
+    _ssh(state.ip, key_path, preset.ssh_username, remove_old)
+
+    # Update apt and install dependencies
+    prep_install = (
+        "sudo apt-get update -y && "
+        "sudo apt-get install -y ca-certificates curl gnupg lsb-release"
+    )
+    _ssh(state.ip, key_path, preset.ssh_username, prep_install)
+
+    # Add Docker GPG key
+    add_key = (
+        "sudo mkdir -m 0755 -p /etc/apt/keyrings && "
+        "curl -fsSL https://download.docker.com/linux/ubuntu/gpg | "
+        "sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg"
+    )
+    _ssh(state.ip, key_path, preset.ssh_username, add_key)
+
+    # Add Docker repository
+    add_repo = (
+        'echo "deb [arch=$(dpkg --print-architecture) '
+        'signed-by=/etc/apt/keyrings/docker.gpg] '
+        'https://download.docker.com/linux/ubuntu '
+        '$(lsb_release -cs) stable" | '
+        'sudo tee /etc/apt/sources.list.d/docker.list > /dev/null'
+    )
+    _ssh(state.ip, key_path, preset.ssh_username, add_repo)
+
+    # Install Docker from official source
+    install_docker = (
+        "sudo apt-get update -y && "
+        "sudo apt-get install -y docker-ce docker-ce-cli containerd.io "
+        "docker-buildx-plugin docker-compose-plugin"
+    )
+    _ssh(state.ip, key_path, preset.ssh_username, install_docker)
+
+    # Enable Docker
     _ssh(state.ip, key_path, preset.ssh_username, "sudo systemctl enable --now docker")
 
     env_flags = _build_env_flags(preset.env)
