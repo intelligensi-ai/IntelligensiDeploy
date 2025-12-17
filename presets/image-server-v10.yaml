@@ -1,23 +1,28 @@
 # Minimal preset for deploying the Flux Schnell image server to Lambda Labs
 
-name: image-server
+name: image-server-v10
 
 instance_type: gpu_1x_a10
 region: us-east-1
 
-docker_image: your-docker-user/intelligensi-image-server:latest
+docker_image: ghcr.io/intelligensi-ai/intelligensi-image-server:latest
 
 port: 8080
 health_path: /health
 
-# Environment variables (secure)
 lambda_api_key: ${LAMBDALABS_API_KEY}
 
-# SSH configuration
 ssh_key_name: intelligensi-lambda
 ssh_private_key_path: ~/.ssh/intelligensi_lambda
 ssh_username: ubuntu
 
+# 🔐 Container registry auth (GitHub Container Registry)
+registry:
+  url: ghcr.io
+  username: intelligensi-ai
+  password_env: GHCR_TOKEN
+
 env:
   HF_HUB_ENABLE_HF_TRANSFER: "1"
   MODEL_ID: "black-forest-labs/FLUX.1-schnell"
+  HF_TOKEN: ${HF_TOKEN}

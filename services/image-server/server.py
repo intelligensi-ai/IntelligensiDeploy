@@ -20,10 +20,16 @@ class GenerateRequest(BaseModel):
     height: Optional[int] = 1024
 
 
+# ✅ CRITICAL FIXES:
+# - device_map="auto" (no manual .to("cuda"))
+# - enable_attention_slicing() to reduce peak VRAM
 pipe = DiffusionPipeline.from_pretrained(
     "black-forest-labs/FLUX.1-schnell",
     torch_dtype=torch.float16,
-).to("cuda")
+    device_map="auto",
+)
+
+pipe.enable_attention_slicing()
 
 
 @app.get("/health")
@@ -34,7 +40,11 @@ def health() -> dict:
 @app.post("/generate")
 def generate(req: GenerateRequest) -> dict:
     try:
-        image = pipe(req.prompt, width=req.width, height=req.height).images[0]
+        image = pipe(
+            req.prompt,
+            width=req.width,
+            height=req.height,
+        ).images[0]
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(status_code=500, detail=str(exc))
 

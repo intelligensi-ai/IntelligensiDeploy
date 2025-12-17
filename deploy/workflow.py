@@ -109,9 +109,27 @@ def _ssh(ip: str, key_path: str, user: str, command: str, retries: int = 20, del
 
 
 def _build_env_flags(env: Dict[str, str]) -> str:
+    """
+    Build docker -e flags with guaranteed env var expansion.
+    Fails fast if ${VAR} was not resolved.
+    """
     parts = []
+
     for key, value in env.items():
-        parts.append(f"-e {key}='{value}'")
+        if value is None:
+            continue
+
+        expanded = _expand(value)
+
+        # HARD FAIL if still unresolved
+        if expanded.startswith("${") and expanded.endswith("}"):
+            raise DeploymentError(
+                f"Environment variable {key} was not resolved (value={value}). "
+                f"Did you forget to export it or load .env.local?"
+            )
+
+        parts.append(f"-e {key}='{expanded}'")
+
     return " ".join(parts)
 
 
@@ -164,6 +182,8 @@ def _bootstrap_remote(preset: Preset, state: DeploymentState) -> None:
     _ssh(state.ip, key_path, preset.ssh_username, "sudo systemctl enable --now docker")
 
     env_flags = _build_env_flags(preset.env)
+
+    print(f"[ENV] Injecting env vars: {', '.join(preset.env.keys())}")
     run_cmd = (
         f"sudo docker pull {preset.docker_image} && "
         f"sudo docker rm -f image-server || true && "
@@ -175,6 +195,15 @@ def _bootstrap_remote(preset: Preset, state: DeploymentState) -> None:
 
 def deploy_preset(name: str) -> DeploymentState:
     preset = _get_preset(name)
+
+    # 🔐 Required runtime secrets
+    required_envs = ["HF_TOKEN"]
+    for var in required_envs:
+        if not os.getenv(var):
+            raise DeploymentError(
+                f"Missing required environment variable: {var}"
+            )
+
     states = _read_states()
     if name in states:
         raise DeploymentError(f"Preset '{name}' already deployed at {states[name].ip}")

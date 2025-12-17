@@ -1,7 +1,47 @@
 {
   "image-server": {
     "preset": "image-server",
-    "instance_id": "f320218e13044e1982160395b950e534",
-    "ip": "150.136.250.137"
+    "instance_id": "3be07d1fae884b429dec18f77f2e498b",
+    "ip": "129.80.95.129"
+  },
+  "image-server-v2": {
+    "preset": "image-server-v2",
+    "instance_id": "24799c7810d64aacbf5ebcf91b13ab18",
+    "ip": "129.153.231.97"
+  },
+  "image-server-v3": {
+    "preset": "image-server-v3",
+    "instance_id": "52df54ecaade4c5e973721c0fa55eede",
+    "ip": "129.213.91.253"
+  },
+  "image-server-v4": {
+    "preset": "image-server-v4",
+    "instance_id": "6197658dd16b404ea8dfc295516acb67",
+    "ip": "129.213.53.114"
+  },
+  "image-server-v5": {
+    "preset": "image-server-v5",
+    "instance_id": "fdcb7817044f4ea6ac6fb02435ab0b7a",
+    "ip": "129.213.24.39"
+  },
+  "image-server-v6": {
+    "preset": "image-server-v6",
+    "instance_id": "fb35f83421374b63a7200a6d409bc50e",
+    "ip": "129.153.129.237"
+  },
+  "image-server-v7": {
+    "preset": "image-server-v7",
+    "instance_id": "2aa6af92334248be9c54305136a39c19",
+    "ip": "150.136.209.123"
+  },
+  "image-server-v8": {
+    "preset": "image-server-v8",
+    "instance_id": "e3122493f880478f8c7ae091c1154734",
+    "ip": "129.80.235.165"
+  },
+  "image-server-v9": {
+    "preset": "image-server-v9",
+    "instance_id": "af815ab3239243339069d7ac3ca24ce0",
+    "ip": "129.213.93.85"
   }
 }
