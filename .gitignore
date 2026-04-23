@@ -5,3 +5,12 @@ __pycache__/
 *.tfstate
 *.pem
 *.key
+.intelligensi_nebius_config.json
+.intelligensi_nebius_secrets.json
+services/comfyui-service/service.env
+services/comfyui-service/models/
+services/comfyui-service/input/
+services/comfyui-service/output/
+services/comfyui-service/custom_nodes/*/
+!services/comfyui-service/custom_nodes/.gitkeep
+services/comfyui-service/workflows/*.json

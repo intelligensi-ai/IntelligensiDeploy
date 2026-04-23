@@ -22,8 +22,8 @@ class Preset:
     """Concrete preset definition for a deployment target."""
 
     name: str
-    instance_type: str
-    docker_image: str
+    instance_type: str = ""
+    docker_image: str = ""
     env: Dict[str, str] = field(default_factory=dict)
     port: int = 8080
     health_path: str = "/health"
@@ -32,30 +32,48 @@ class Preset:
     ssh_key_name: str | None = None
     ssh_private_key_path: str | None = None
     ssh_username: str = "ubuntu"
+    provider: str | None = None
+    service: str | None = None
+    deployment_mode: str | None = None
+    environment: str | None = None
+    disk_size_gb: int | None = None
 
     @classmethod
     def from_dict(cls, name: str, data: Dict) -> "Preset":
-        required = ["instance_type", "docker_image", "port", "health_path"]
-        missing = [field for field in required if field not in data]
-        if missing:
-            raise PresetValidationError(f"Preset '{name}' is missing fields: {', '.join(missing)}")
+        classic_shape = "instance_type" in data and "docker_image" in data
+        provider_shape = "provider" in data and "service" in data
+
+        if not classic_shape and not provider_shape:
+            raise PresetValidationError(
+                f"Preset '{name}' must define either classic deployment fields "
+                f"(instance_type, docker_image) or provider fields (provider, service)"
+            )
 
         env = data.get("env") or {}
         if not isinstance(env, dict):
             raise PresetValidationError("env must be a mapping of key/value pairs")
 
+        docker_image = data.get("docker_image", data.get("image", ""))
+        port_value = data.get("port", data.get("service_port", 8080))
+        health_path = data.get("health_path", "/health")
+
         return cls(
             name=name,
-            instance_type=str(data["instance_type"]),
-            docker_image=str(data["docker_image"]),
+            instance_type=str(data.get("instance_type", "")),
+            docker_image=str(docker_image),
             env={str(k): str(v) for k, v in env.items()},
-            port=int(data["port"]),
-            health_path=str(data["health_path"]),
+            port=int(port_value),
+            health_path=str(health_path),
             lambda_api_key=data.get("lambda_api_key"),
             region=str(data.get("region", "us-east-1")),
             ssh_key_name=data.get("ssh_key_name"),
             ssh_private_key_path=data.get("ssh_private_key_path"),
             ssh_username=str(data.get("ssh_username", "ubuntu")),
+            provider=str(data["provider"]) if data.get("provider") is not None else None,
+            service=str(data["service"]) if data.get("service") is not None else None,
+            deployment_mode=str(data["deployment_mode"]) if data.get("deployment_mode") is not None else None,
+            environment=str(data["environment"]) if data.get("environment") is not None else None,
+            disk_size_gb=int(data["disk_size_gb"]) if data.get("disk_size_gb") is not None else None,
         )
 
 

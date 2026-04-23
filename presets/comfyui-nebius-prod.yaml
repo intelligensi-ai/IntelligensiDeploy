@@ -1,0 +1,8 @@
+provider: nebius
+service: comfyui-service
+deployment_mode: vm
+environment: prod
+image: intelligensi/comfyui-service:prod
+service_port: 8188
+disk_size_gb: 400
+

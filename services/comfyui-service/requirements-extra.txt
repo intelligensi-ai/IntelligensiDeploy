@@ -1,0 +1,5 @@
+# Add optional ComfyUI-adjacent runtime packages here.
+# Keep this file lightweight for Phase 1. Large model packages and heavyweight
+# custom node dependencies should be installed selectively by install_nodes.sh.
+requests>=2.31.0
+

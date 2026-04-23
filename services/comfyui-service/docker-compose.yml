@@ -1,0 +1,27 @@
+version: "3.9"
+
+services:
+  comfyui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: intelligensi/comfyui-service:local
+    ports:
+      - "8188:8188"
+    environment:
+      COMFYUI_AUTO_INSTALL_NODES: "true"
+      COMFYUI_AUTO_DOWNLOAD_MODELS: "false"
+    volumes:
+      - ./models:/opt/ComfyUI/models
+      - ./input:/opt/ComfyUI/input
+      - ./output:/opt/ComfyUI/output
+      - ./workflows:/opt/workflows
+      - ./custom_nodes:/opt/custom_nodes_external
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+

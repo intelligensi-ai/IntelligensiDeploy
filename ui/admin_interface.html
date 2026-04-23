@@ -3,12 +3,860 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>IntelligensiDeploy Admin</title>
+    <title>IntelligensiDeploy Control Room</title>
+    <style>
+      :root {
+        --bg: #07111a;
+        --bg-panel: rgba(8, 23, 35, 0.88);
+        --bg-panel-strong: #0b1c2b;
+        --line: rgba(120, 188, 212, 0.18);
+        --text: #e5f1f7;
+        --muted: #8aa7b5;
+        --accent: #6de2cf;
+        --accent-warm: #f4c96b;
+        --danger: #ff7d7d;
+        --success: #78f2b3;
+        --shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top left, rgba(45, 108, 138, 0.3), transparent 28%),
+          radial-gradient(circle at top right, rgba(109, 226, 207, 0.18), transparent 24%),
+          linear-gradient(180deg, #061019 0%, #07111a 42%, #091722 100%);
+        font-family: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
+      }
+
+      .shell {
+        width: min(1400px, calc(100vw - 32px));
+        margin: 24px auto 32px;
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: 1.35fr 0.9fr;
+        gap: 18px;
+        margin-bottom: 18px;
+      }
+
+      .panel {
+        background: var(--bg-panel);
+        border: 1px solid var(--line);
+        border-radius: 26px;
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(18px);
+      }
+
+      .hero-copy {
+        padding: 28px 30px 26px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .hero-brand {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 14px;
+        position: relative;
+        z-index: 1;
+      }
+
+      .hero-brand img {
+        width: 72px;
+        height: 72px;
+        object-fit: contain;
+        filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.22));
+      }
+
+      .hero-brand-copy {
+        min-width: 0;
+      }
+
+      .hero-copy::after {
+        content: "";
+        position: absolute;
+        inset: auto -10% -25% auto;
+        width: 260px;
+        height: 260px;
+        border-radius: 999px;
+        background: radial-gradient(circle, rgba(109, 226, 207, 0.2), transparent 68%);
+      }
+
+      .eyebrow {
+        margin: 0 0 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.16em;
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      h1 {
+        margin: 0;
+        font-family: "Sora", "IBM Plex Sans", sans-serif;
+        font-size: clamp(34px, 5vw, 56px);
+        line-height: 0.98;
+        letter-spacing: -0.04em;
+        max-width: 11ch;
+      }
+
+      .hero-copy p {
+        max-width: 62ch;
+        margin: 16px 0 0;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .hero-stats {
+        display: grid;
+        gap: 12px;
+        padding: 18px;
+      }
+
+      .stat-card {
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        padding: 18px;
+      }
+
+      .stat-label {
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+      }
+
+      .stat-value {
+        margin-top: 10px;
+        font-family: "Sora", sans-serif;
+        font-size: 28px;
+        letter-spacing: -0.04em;
+      }
+
+      .status-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 14px;
+        border-radius: 999px;
+        font-size: 13px;
+        font-weight: 700;
+        text-transform: capitalize;
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--line);
+      }
+
+      .status-chip::before {
+        content: "";
+        width: 9px;
+        height: 9px;
+        border-radius: 999px;
+        background: currentColor;
+      }
+
+      .status-idle,
+      .status-planning,
+      .status-updating,
+      .status-shutdown {
+        color: var(--accent-warm);
+      }
+
+      .status-running,
+      .status-verifying {
+        color: var(--success);
+      }
+
+      .status-provisioning,
+      .status-building,
+      .status-deploying {
+        color: var(--accent);
+      }
+
+      .status-error {
+        color: var(--danger);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 18px;
+      }
+
+      .stack {
+        display: grid;
+        gap: 18px;
+      }
+
+      .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        padding: 24px 24px 10px;
+      }
+
+      .section-header h2 {
+        margin: 0;
+        font-family: "Sora", sans-serif;
+        font-size: 22px;
+        letter-spacing: -0.04em;
+      }
+
+      .section-body {
+        padding: 0 24px 24px;
+      }
+
+      .deployment-list,
+      .timeline,
+      .fix-list,
+      .meta-list {
+        display: grid;
+        gap: 12px;
+      }
+
+      .deployment-card,
+      .timeline-item,
+      .fix-card,
+      .meta-card {
+        padding: 16px;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.035);
+        border: 1px solid rgba(139, 194, 214, 0.14);
+      }
+
+      .deployment-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: start;
+      }
+
+      .deployment-name {
+        font-weight: 700;
+        font-size: 18px;
+      }
+
+      .deployment-meta {
+        margin-top: 10px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .timeline-item time,
+      .meta-label {
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+      }
+
+      .timeline-title {
+        margin-top: 8px;
+        font-weight: 700;
+      }
+
+      .timeline-context {
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.5;
+        white-space: pre-wrap;
+      }
+
+      .fix-card strong {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--accent);
+      }
+
+      .fix-card p,
+      .empty {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.6;
+      }
+
+      .config-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .field {
+        display: grid;
+        gap: 6px;
+      }
+
+      .field label {
+        color: var(--muted);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+      }
+
+      .field input {
+        width: 100%;
+        border-radius: 14px;
+        border: 1px solid rgba(139, 194, 214, 0.18);
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--text);
+        padding: 12px 14px;
+        font: inherit;
+      }
+
+      .field.full {
+        grid-column: 1 / -1;
+      }
+
+      .inline-note {
+        margin-top: 10px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .warning-note {
+        margin-top: 12px;
+        padding: 12px 14px;
+        border-radius: 14px;
+        background: rgba(255, 125, 125, 0.08);
+        border: 1px solid rgba(255, 125, 125, 0.18);
+        color: #ffb0b0;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .save-status {
+        min-height: 20px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .log-panel {
+        min-height: 420px;
+      }
+
+      pre {
+        margin: 0;
+        padding: 18px;
+        border-radius: 20px;
+        background: #041019;
+        border: 1px solid rgba(109, 226, 207, 0.12);
+        color: #c7edf0;
+        font-family: "SFMono-Regular", "JetBrains Mono", monospace;
+        font-size: 12px;
+        line-height: 1.55;
+        max-height: 520px;
+        overflow: auto;
+      }
+
+      .toolbar {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+      }
+
+      button {
+        appearance: none;
+        border: 0;
+        border-radius: 999px;
+        background: linear-gradient(135deg, var(--accent), #91c5ff);
+        color: #05202a;
+        padding: 10px 16px;
+        font-weight: 800;
+        cursor: pointer;
+      }
+
+      .ghost {
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--text);
+        border: 1px solid var(--line);
+      }
+
+      .footer-note {
+        margin-top: 18px;
+        padding: 16px 20px;
+        color: var(--muted);
+        text-align: center;
+        font-size: 13px;
+      }
+
+      @media (max-width: 1100px) {
+        .hero,
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 720px) {
+        .shell {
+          width: min(100vw - 20px, 1400px);
+          margin: 10px auto 20px;
+        }
+
+        .hero-copy,
+        .section-header,
+        .section-body {
+          padding-left: 18px;
+          padding-right: 18px;
+        }
+
+        .deployment-meta {
+          grid-template-columns: 1fr;
+        }
+
+        .config-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .toolbar {
+          flex-wrap: wrap;
+        }
+      }
+    </style>
   </head>
   <body>
-    <main>
-      <h1>IntelligensiDeploy Admin Interface</h1>
-      <p>Phase 3 scaffold ready for future implementation.</p>
-    </main>
+    <div class="shell">
+      <section class="hero">
+        <article class="panel hero-copy">
+          <div class="hero-brand">
+            <img src="/images/logocutout.png" alt="Intelligensi logo" />
+            <div class="hero-brand-copy">
+              <p class="eyebrow">IntelligensiDeploy</p>
+            </div>
+          </div>
+          <h1>Control Room For Every Deployment</h1>
+          <p>
+            Watch provisioning, image build, deploy, and verification phases in one place.
+            When something breaks, surface likely causes and next actions instead of forcing a log hunt.
+          </p>
+        </article>
+        <aside class="panel hero-stats">
+          <div class="stat-card">
+            <div class="stat-label">Workflow State</div>
+            <div class="stat-value" id="current-state">Idle</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Tracked Deployments</div>
+            <div class="stat-value" id="deployment-count">0</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Suggested Fixes</div>
+            <div class="stat-value" id="suggestion-count">0</div>
+          </div>
+        </aside>
+      </section>
+
+      <section class="grid">
+        <div class="stack">
+          <section class="panel">
+            <div class="section-header">
+              <h2>Live Fleet</h2>
+              <div class="toolbar">
+                <span class="status-chip status-idle" id="status-chip">idle</span>
+                <button id="refresh-overview">Refresh</button>
+              </div>
+            </div>
+            <div class="section-body">
+              <div class="deployment-list" id="deployment-list"></div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="section-header">
+              <h2>Deployment Timeline</h2>
+              <button class="ghost" id="refresh-history">Reload events</button>
+            </div>
+            <div class="section-body">
+              <div class="timeline" id="timeline"></div>
+            </div>
+          </section>
+        </div>
+
+        <div class="stack">
+          <section class="panel">
+            <div class="section-header">
+              <h2>Nebius Config</h2>
+              <div class="toolbar">
+                <button id="save-nebius-config">Save</button>
+                <button class="ghost" id="copy-nebius-exports">Copy exports</button>
+              </div>
+            </div>
+            <div class="section-body">
+              <div class="config-grid">
+                <div class="field">
+                  <label for="project_id">Project ID</label>
+                  <input id="project_id" />
+                </div>
+                <div class="field">
+                  <label for="api_token">API Token</label>
+                  <input id="api_token" type="password" />
+                </div>
+                <div class="field full">
+                  <label for="ssh_public_key_path">SSH Public Key Path</label>
+                  <input id="ssh_public_key_path" />
+                </div>
+                <div class="field full">
+                  <label for="ssh_private_key_path">SSH Private Key Path</label>
+                  <input id="ssh_private_key_path" />
+                </div>
+                <div class="field">
+                  <label for="ssh_username">SSH Username</label>
+                  <input id="ssh_username" />
+                </div>
+                <div class="field">
+                  <label for="public_ip">Existing Nebius VM IP</label>
+                  <input id="public_ip" />
+                </div>
+                <div class="field">
+                  <label for="instance_name">Instance Name</label>
+                  <input id="instance_name" />
+                </div>
+                <div class="field">
+                  <label for="gpu_shape">GPU Shape</label>
+                  <input id="gpu_shape" />
+                </div>
+                <div class="field">
+                  <label for="disk_size_gb">Disk Size GB</label>
+                  <input id="disk_size_gb" />
+                </div>
+                <div class="field">
+                  <label for="region">Region</label>
+                  <input id="region" />
+                </div>
+                <div class="field">
+                  <label for="zone">Zone</label>
+                  <input id="zone" />
+                </div>
+              </div>
+              <div class="inline-note" id="config-paths">Local config storage files will appear here.</div>
+              <div class="warning-note">
+                Nebius credentials entered here are stored locally on disk for operator convenience.
+                This is not a vault or managed secret store. Do not commit the generated config files.
+              </div>
+              <div class="save-status" id="save-status"></div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="section-header">
+              <h2>ComfyUI Workflow Commands</h2>
+              <div class="toolbar">
+                <button class="ghost" id="copy-service-url">Copy service URL</button>
+                <button class="ghost" id="open-service-url">Open ComfyUI</button>
+                <button class="ghost" id="copy-nebius-workflow">Copy workflow</button>
+              </div>
+            </div>
+            <div class="section-body">
+              <div class="inline-note" id="service-url-note">ComfyUI URL will appear here once a Nebius public IP is saved.</div>
+              <pre id="nebius-commands">Waiting for Nebius config…</pre>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="section-header">
+              <h2>Suggested Fixes</h2>
+            </div>
+            <div class="section-body">
+              <div class="fix-list" id="fix-list"></div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="section-header">
+              <h2>Signals</h2>
+            </div>
+            <div class="section-body">
+              <div class="meta-list" id="meta-list"></div>
+            </div>
+          </section>
+
+          <section class="panel log-panel">
+            <div class="section-header">
+              <h2>Recent Logs</h2>
+              <button class="ghost" id="refresh-logs">Tail logs</button>
+            </div>
+            <div class="section-body">
+              <pre id="logs">Waiting for log data…</pre>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <div class="footer-note">
+        Serve this page through <code>python3 ui/dashboard_server.py</code>. It reads existing deployment state and log files directly from this repo.
+      </div>
+    </div>
+
+    <script>
+      const stateChip = document.getElementById("status-chip");
+      const currentState = document.getElementById("current-state");
+      const deploymentCount = document.getElementById("deployment-count");
+      const suggestionCount = document.getElementById("suggestion-count");
+      const deploymentList = document.getElementById("deployment-list");
+      const timeline = document.getElementById("timeline");
+      const fixList = document.getElementById("fix-list");
+      const metaList = document.getElementById("meta-list");
+      const logBlock = document.getElementById("logs");
+      const nebiusCommands = document.getElementById("nebius-commands");
+      const saveStatus = document.getElementById("save-status");
+      const configPaths = document.getElementById("config-paths");
+      const serviceUrlNote = document.getElementById("service-url-note");
+      const nebiusFields = [
+        "project_id",
+        "api_token",
+        "ssh_public_key_path",
+        "ssh_private_key_path",
+        "ssh_username",
+        "public_ip",
+        "instance_name",
+        "gpu_shape",
+        "disk_size_gb",
+        "region",
+        "zone",
+      ];
+
+      const escapeHtml = (value) =>
+        String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;");
+
+      const friendlyDate = (value) => {
+        if (!value) return "Unknown";
+        const date = new Date(Number(value) ? Number(value) * 1000 : value);
+        return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString();
+      };
+
+      function renderDeployments(deployments) {
+        const entries = Object.entries(deployments || {});
+        deploymentCount.textContent = String(entries.length);
+
+        if (!entries.length) {
+          deploymentList.innerHTML = '<div class="empty">No tracked deployments yet.</div>';
+          return;
+        }
+
+        deploymentList.innerHTML = entries
+          .map(([name, item]) => `
+            <article class="deployment-card">
+              <div class="deployment-head">
+                <div>
+                  <div class="deployment-name">${escapeHtml(name)}</div>
+                  <div class="meta-label">${escapeHtml(item.instance_id || "No instance id")}</div>
+                </div>
+                <span class="status-chip status-${escapeHtml(String(item.container_status || "unknown"))}">
+                  ${escapeHtml(item.container_status || "unknown")}
+                </span>
+              </div>
+              <div class="deployment-meta">
+                <div><span class="meta-label">IP</span><br />${escapeHtml(item.ip || "unknown")}</div>
+                <div><span class="meta-label">Ingress</span><br />${escapeHtml(item.ingress_status || "unknown")}</div>
+              </div>
+            </article>
+          `)
+          .join("");
+      }
+
+      function renderTimeline(history) {
+        if (!history?.length) {
+          timeline.innerHTML = '<div class="empty">No workflow transitions recorded yet.</div>';
+          return;
+        }
+
+        timeline.innerHTML = [...history]
+          .reverse()
+          .slice(0, 16)
+          .map((item) => `
+            <article class="timeline-item">
+              <time>${escapeHtml(friendlyDate(item.timestamp))}</time>
+              <div class="timeline-title">${escapeHtml(item.from_state || "start")} → ${escapeHtml(item.to_state || "unknown")}</div>
+              <div class="timeline-context">${escapeHtml(JSON.stringify(item.context || {}, null, 2))}</div>
+            </article>
+          `)
+          .join("");
+      }
+
+      function renderFixes(issues, suggestions) {
+        suggestionCount.textContent = String((suggestions || []).length);
+
+        const cards = [];
+        if (issues?.length) {
+          cards.push(`
+            <article class="fix-card">
+              <strong>Detected Issues</strong>
+              <p>${escapeHtml(issues.join(" • "))}</p>
+            </article>
+          `);
+        }
+
+        for (const item of suggestions || []) {
+          cards.push(`
+            <article class="fix-card">
+              <strong>${escapeHtml(item.source || "suggestion")}</strong>
+              <p>${escapeHtml(item.text || "")}</p>
+            </article>
+          `);
+        }
+
+        fixList.innerHTML = cards.length ? cards.join("") : '<div class="empty">No active fixes suggested right now.</div>';
+      }
+
+      function renderMeta(snapshot) {
+        const cards = [
+          {
+            label: "State File",
+            value: snapshot.state_path || "Missing",
+          },
+          {
+            label: "Log File",
+            value: snapshot.log_path || "Missing",
+          },
+          {
+            label: "Preset Count",
+            value: String((snapshot.presets || []).length),
+          },
+        ];
+
+        metaList.innerHTML = cards
+          .map((item) => `
+            <article class="meta-card">
+              <div class="meta-label">${escapeHtml(item.label)}</div>
+              <div style="margin-top:8px">${escapeHtml(item.value)}</div>
+            </article>
+          `)
+          .join("");
+      }
+
+      async function loadOverview() {
+        const response = await fetch("/api/overview");
+        const snapshot = await response.json();
+        const state = String(snapshot.current_state || "idle");
+
+        currentState.textContent = state;
+        stateChip.textContent = state;
+        stateChip.className = `status-chip status-${state}`;
+
+        renderDeployments(snapshot.deployments);
+        renderTimeline(snapshot.history);
+        renderFixes(snapshot.issues, snapshot.suggestions);
+        renderMeta(snapshot);
+      }
+
+      function getNebiusFormPayload() {
+        return Object.fromEntries(
+          nebiusFields.map((id) => [id, document.getElementById(id).value.trim()])
+        );
+      }
+
+      function renderNebiusConfig(payload) {
+        const config = payload.config || {};
+        for (const id of nebiusFields) {
+          document.getElementById(id).value = config[id] || "";
+        }
+        document.getElementById("api_token").placeholder = payload.has_api_token
+          ? "Stored locally. Enter a new value only to replace it."
+          : "";
+        document.getElementById("ssh_private_key_path").placeholder = payload.has_ssh_private_key_path
+          ? "Stored locally. Enter a new path only to replace it."
+          : "";
+        nebiusCommands.textContent = (payload.commands || []).join("\n\n");
+        configPaths.textContent = payload.config_path && payload.secret_path
+          ? `Stored locally in ${payload.config_path} and ${payload.secret_path}.`
+          : "Local config storage files will appear here.";
+        serviceUrlNote.textContent = payload.service_url
+          ? `ComfyUI should be reachable at ${payload.service_url}`
+          : "ComfyUI URL will appear here once a Nebius public IP is saved.";
+      }
+
+      async function loadNebiusConfig() {
+        const response = await fetch("/api/nebius-config");
+        const payload = await response.json();
+        renderNebiusConfig(payload);
+      }
+
+      async function saveNebiusConfig() {
+        saveStatus.textContent = "Saving…";
+        const response = await fetch("/api/nebius-config", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(getNebiusFormPayload()),
+        });
+        const payload = await response.json();
+        renderNebiusConfig(payload);
+        saveStatus.textContent = "Saved locally. Use the workflow block below to run the ComfyUI deploy path.";
+      }
+
+      async function copyTextBlock(text) {
+        await navigator.clipboard.writeText(text);
+      }
+
+      async function loadLogs() {
+        const response = await fetch("/api/logs?limit=220");
+        const payload = await response.json();
+        logBlock.textContent = (payload.lines || []).length
+          ? payload.lines.join("\n")
+          : "No deploy.log file found yet. Run a deployment through the stateful workflow to populate logs.";
+      }
+
+      async function refreshAll() {
+        try {
+          await Promise.all([loadOverview(), loadLogs(), loadNebiusConfig()]);
+        } catch (error) {
+          logBlock.textContent = `Dashboard refresh failed: ${error}`;
+        }
+      }
+
+      document.getElementById("refresh-overview").addEventListener("click", loadOverview);
+      document.getElementById("refresh-history").addEventListener("click", loadOverview);
+      document.getElementById("refresh-logs").addEventListener("click", loadLogs);
+      document.getElementById("save-nebius-config").addEventListener("click", saveNebiusConfig);
+      document.getElementById("copy-nebius-exports").addEventListener("click", async () => {
+        await copyTextBlock((nebiusCommands.textContent || "").split("\n\n./scripts/")[0] || "");
+        saveStatus.textContent = "Copied Nebius export block.";
+      });
+      document.getElementById("copy-nebius-workflow").addEventListener("click", async () => {
+        await copyTextBlock(nebiusCommands.textContent || "");
+        saveStatus.textContent = "Copied ComfyUI workflow commands.";
+      });
+      document.getElementById("copy-service-url").addEventListener("click", async () => {
+        const url = serviceUrlNote.textContent.replace("ComfyUI should be reachable at ", "").trim();
+        if (!url.startsWith("http")) {
+          saveStatus.textContent = "No ComfyUI service URL available yet.";
+          return;
+        }
+        await copyTextBlock(url);
+        saveStatus.textContent = "Copied ComfyUI service URL.";
+      });
+      document.getElementById("open-service-url").addEventListener("click", async () => {
+        const url = serviceUrlNote.textContent.replace("ComfyUI should be reachable at ", "").trim();
+        if (!url.startsWith("http")) {
+          saveStatus.textContent = "No ComfyUI service URL available yet.";
+          return;
+        }
+        window.open(url, "_blank", "noopener,noreferrer");
+      });
+
+      refreshAll();
+      setInterval(loadOverview, 15000);
+      setInterval(loadLogs, 20000);
+    </script>
   </body>
 </html>
