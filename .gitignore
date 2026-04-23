@@ -14,3 +14,5 @@ services/comfyui-service/output/
 services/comfyui-service/custom_nodes/*/
 !services/comfyui-service/custom_nodes/.gitkeep
 services/comfyui-service/workflows/*.json
+/images/
+/intelligensi_a4_background_final.png
