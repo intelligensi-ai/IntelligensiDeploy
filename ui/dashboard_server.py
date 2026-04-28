@@ -24,6 +24,7 @@ LOG_PATH = ROOT / "deploy.log"
 PRESET_DIR = ROOT / "presets"
 NEBIUS_CONFIG_PATH = ROOT / ".intelligensi_nebius_config.json"
 NEBIUS_SECRET_PATH = ROOT / ".intelligensi_nebius_secrets.json"
+RUNTIME_STATE_PATH = ROOT / ".intelligensi_runtime.json"
 
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -263,28 +264,60 @@ class DashboardSnapshot:
     log_path: Optional[str]
     state_path: Optional[str]
     nebius_config_present: bool
+    runtime_state_path: Optional[str]
 
 
 def build_snapshot(log_limit: int = 200) -> DashboardSnapshot:
     state_blob = _safe_json(STATE_PATH, {})
     history = state_blob.get("history", []) if isinstance(state_blob, dict) else []
     deployments = _safe_json(INSTANCE_PATH, {})
+    runtime_blob = _safe_json(RUNTIME_STATE_PATH, {})
+    runtime_fleet = runtime_blob.get("fleet", {}) if isinstance(runtime_blob, dict) else {}
+    merged_deployments = {}
+    if isinstance(deployments, dict):
+      merged_deployments.update(deployments)
+    if isinstance(runtime_fleet, dict):
+      merged_deployments.update(runtime_fleet)
     logs = _tail_lines(LOG_PATH, log_limit)
-    issues = _collect_issue_hints(history, logs, deployments if isinstance(deployments, dict) else {})
+    issues = _collect_issue_hints(history, logs, merged_deployments if isinstance(merged_deployments, dict) else {})
     suggestions = _derive_fix_suggestions(issues, logs)
     nebius_config = load_nebius_config()
 
     return DashboardSnapshot(
         current_state=state_blob.get("current_state", "idle") if isinstance(state_blob, dict) else "idle",
         history=history if isinstance(history, list) else [],
-        deployments=deployments if isinstance(deployments, dict) else {},
+        deployments=merged_deployments if isinstance(merged_deployments, dict) else {},
         presets=_load_presets(),
         issues=issues,
         suggestions=suggestions,
         log_path=str(LOG_PATH.relative_to(ROOT)) if LOG_PATH.exists() else None,
         state_path=str(STATE_PATH.relative_to(ROOT)) if STATE_PATH.exists() else None,
         nebius_config_present=bool(nebius_config.get("project_id") and nebius_config.get("public_ip")),
+        runtime_state_path=str(RUNTIME_STATE_PATH.relative_to(ROOT)) if RUNTIME_STATE_PATH.exists() else None,
     )
+
+
+def _update_runtime_instance_status(instance_id: str, status: str) -> Dict[str, Any]:
+    runtime_blob = _safe_json(RUNTIME_STATE_PATH, {"version": 1, "fleet": {}, "executionHistory": []})
+    if not isinstance(runtime_blob, dict):
+        runtime_blob = {"version": 1, "fleet": {}, "executionHistory": []}
+
+    fleet = runtime_blob.get("fleet", {})
+    if not isinstance(fleet, dict):
+        fleet = {}
+        runtime_blob["fleet"] = fleet
+
+    if instance_id not in fleet:
+        snapshot = build_snapshot()
+        source = snapshot.deployments.get(instance_id)
+        if not source:
+            raise KeyError(instance_id)
+        fleet[instance_id] = source
+
+    fleet[instance_id]["status"] = status
+    fleet[instance_id]["updatedAt"] = __import__("datetime").datetime.utcnow().isoformat() + "Z"
+    _write_json(RUNTIME_STATE_PATH, runtime_blob)
+    return fleet[instance_id]
 
 
 class DashboardHandler(SimpleHTTPRequestHandler):
@@ -343,6 +376,21 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                 "service_url": build_nebius_service_url(config),
             }
             self._send_json(payload)
+            return
+
+        if parsed.path in {"/api/fleet/start", "/api/fleet/stop"}:
+            body = self._read_json_body()
+            instance_id = body.get("instance_id") if isinstance(body, dict) else None
+            if not isinstance(instance_id, str) or not instance_id.strip():
+                self.send_error(HTTPStatus.BAD_REQUEST, "Missing instance_id")
+                return
+            target_status = "running" if parsed.path.endswith("/start") else "stopped"
+            try:
+                instance = _update_runtime_instance_status(instance_id, target_status)
+            except KeyError:
+                self.send_error(HTTPStatus.NOT_FOUND, "Unknown instance_id")
+                return
+            self._send_json({"ok": True, "instance": instance})
             return
 
         self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")

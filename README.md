@@ -34,6 +34,14 @@ IntelligensiDeploy/
 │   ├── image-server-v13.yaml
 │   ├── comfyui-nebius-dev.yaml
 │   └── comfyui-nebius-prod.yaml
+├── control-plane/
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── src/
+│       ├── providers/
+│       ├── router/
+│       ├── fleet/
+│       └── runtime/
 ├── scripts/
 │   ├── provision_lambda_gpu.sh
 │   ├── destroy_lambda_gpu.sh
@@ -166,10 +174,12 @@ http://127.0.0.1:4173
 Current dashboard features:
 
 - live deployment inventory from `.intelligensi_instances.json`
+- provider-aware runtime fleet data from `.intelligensi_runtime.json` when present
 - workflow timeline from `.intelligensi_state.json` when present
 - recent deploy logs from `deploy.log`
 - heuristic fix suggestions for common deployment failures
 - a Nebius config form for the ComfyUI flow
+- start/stop controls that update provider-aware runtime fleet state
 - generated shell exports and command sequence for:
   - `./scripts/provision_nebius_gpu.sh`
   - `./scripts/deploy_comfyui_service.sh dev`
@@ -179,6 +189,7 @@ Nebius config entered in the dashboard is stored locally on disk in:
 
 - `.intelligensi_nebius_config.json`
 - `.intelligensi_nebius_secrets.json`
+- `.intelligensi_runtime.json`
 
 These files are intended for local operator convenience. They are not a managed
 secret store and should not be committed to git.
@@ -212,6 +223,50 @@ Mounted local directories:
 - `./input` -> `/opt/ComfyUI/input`
 - `./output` -> `/opt/ComfyUI/output`
 - `./workflows` -> `/opt/workflows`
+
+TypeScript control plane
+
+The repo now includes a standalone TypeScript orchestration layer under
+`control-plane/`.
+
+It provides:
+
+- workload definitions for:
+  - `image_generation`
+  - `video_generation`
+  - `llm_inference`
+  - `vector_indexing`
+  - `cms_sync`
+  - `background_agent`
+  - `realtime_session`
+- a provider interface with:
+  - `provisionInstance`
+  - `startInstance`
+  - `stopInstance`
+  - `deployWorkload`
+  - `getStatus`
+  - `destroyInstance`
+- provider implementations for:
+  - Nebius
+  - Lambda
+  - GCP
+- a routing engine that scores providers from workload + context
+- runtime fleet persistence in `.intelligensi_runtime.json`
+
+Build or type-check it with:
+
+```bash
+cd control-plane
+npm install
+npm run check
+```
+
+Current assumption:
+
+- the TypeScript control plane is the provider-agnostic orchestration core
+- the existing Python dashboard reads and updates the persisted runtime fleet
+  state so the UI can evolve before a dedicated Node control-plane service is
+  introduced
 
 Presets
 

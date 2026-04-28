@@ -254,6 +254,13 @@
         font-size: 14px;
       }
 
+      .deployment-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 14px;
+        flex-wrap: wrap;
+      }
+
       .timeline-item time,
       .meta-label {
         color: var(--muted);
@@ -658,15 +665,21 @@
               <div class="deployment-head">
                 <div>
                   <div class="deployment-name">${escapeHtml(name)}</div>
-                  <div class="meta-label">${escapeHtml(item.instance_id || "No instance id")}</div>
+                  <div class="meta-label">${escapeHtml(item.id || item.instance_id || "No instance id")}</div>
                 </div>
-                <span class="status-chip status-${escapeHtml(String(item.container_status || "unknown"))}">
-                  ${escapeHtml(item.container_status || "unknown")}
+                <span class="status-chip status-${escapeHtml(String(item.status || item.container_status || "unknown"))}">
+                  ${escapeHtml(item.status || item.container_status || "unknown")}
                 </span>
               </div>
               <div class="deployment-meta">
-                <div><span class="meta-label">IP</span><br />${escapeHtml(item.ip || "unknown")}</div>
-                <div><span class="meta-label">Ingress</span><br />${escapeHtml(item.ingress_status || "unknown")}</div>
+                <div><span class="meta-label">Provider</span><br />${escapeHtml(item.providerType || item.provider || "legacy")}</div>
+                <div><span class="meta-label">Workload</span><br />${escapeHtml(item.workloadAssigned || "unassigned")}</div>
+                <div><span class="meta-label">Endpoint</span><br />${escapeHtml(item.endpoint || item.ip || "unknown")}</div>
+                <div><span class="meta-label">Hourly Cost</span><br />$${escapeHtml(item.hourlyCostUsd ?? "0")}</div>
+              </div>
+              <div class="deployment-actions">
+                <button class="ghost fleet-action" data-action="start" data-instance-id="${escapeHtml(item.id || item.instance_id || name)}">Start</button>
+                <button class="ghost fleet-action" data-action="stop" data-instance-id="${escapeHtml(item.id || item.instance_id || name)}">Stop</button>
               </div>
             </article>
           `)
@@ -808,6 +821,20 @@
         await navigator.clipboard.writeText(text);
       }
 
+      async function updateFleetInstance(action, instanceId) {
+        const response = await fetch(`/api/fleet/${action}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ instance_id: instanceId }),
+        });
+        if (!response.ok) {
+          throw new Error(`Fleet ${action} failed for ${instanceId}`);
+        }
+        await loadOverview();
+      }
+
       async function loadLogs() {
         const response = await fetch("/api/logs?limit=220");
         const payload = await response.json();
@@ -827,6 +854,21 @@
       document.getElementById("refresh-overview").addEventListener("click", loadOverview);
       document.getElementById("refresh-history").addEventListener("click", loadOverview);
       document.getElementById("refresh-logs").addEventListener("click", loadLogs);
+      deploymentList.addEventListener("click", async (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+        if (!target.classList.contains("fleet-action")) return;
+        const action = target.dataset.action;
+        const instanceId = target.dataset.instanceId;
+        if (!action || !instanceId) return;
+        try {
+          saveStatus.textContent = `Applying ${action} to ${instanceId}…`;
+          await updateFleetInstance(action, instanceId);
+          saveStatus.textContent = `Applied ${action} to ${instanceId}.`;
+        } catch (error) {
+          saveStatus.textContent = `Fleet control failed: ${error}`;
+        }
+      });
       document.getElementById("save-nebius-config").addEventListener("click", saveNebiusConfig);
       document.getElementById("copy-nebius-exports").addEventListener("click", async () => {
         await copyTextBlock((nebiusCommands.textContent || "").split("\n\n./scripts/")[0] || "");
