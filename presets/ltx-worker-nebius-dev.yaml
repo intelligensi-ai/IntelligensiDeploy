@@ -1,0 +1,9 @@
+provider: nebius
+service: ltx-worker
+deployment_mode: vm
+environment: dev
+image: ghcr.io/intelligensi-ai/ltx-worker:latest
+service_port: 8000
+health_path: /health
+disk_size_gb: 200
+

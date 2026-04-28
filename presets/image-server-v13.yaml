@@ -1,6 +1,6 @@
 # Minimal preset for deploying the Flux Schnell image server to Lambda Labs
 
-name: image-server-v12
+name: image-server-v13
 
 instance_type: gpu_1x_a10
 region: us-east-1

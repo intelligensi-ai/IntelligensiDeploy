@@ -8,7 +8,9 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import sys
+import threading
 from dataclasses import asdict, dataclass
 from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -24,7 +26,11 @@ LOG_PATH = ROOT / "deploy.log"
 PRESET_DIR = ROOT / "presets"
 NEBIUS_CONFIG_PATH = ROOT / ".intelligensi_nebius_config.json"
 NEBIUS_SECRET_PATH = ROOT / ".intelligensi_nebius_secrets.json"
+LAMBDA_CONFIG_PATH = ROOT / ".intelligensi_lambda_config.json"
+LAMBDA_SECRET_PATH = ROOT / ".intelligensi_lambda_secrets.json"
 RUNTIME_STATE_PATH = ROOT / ".intelligensi_runtime.json"
+ACTIVE_DEPLOY: Dict[str, Any] = {"process": None, "preset": None}
+ACTIVE_DEPLOY_LOCK = threading.Lock()
 
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -70,6 +76,152 @@ def _load_presets() -> List[Dict[str, Any]]:
             }
         )
     return presets
+
+
+def _preset_names() -> set[str]:
+    return {preset["name"] for preset in _load_presets()}
+
+
+def _start_preset_deploy(preset: str) -> Dict[str, Any]:
+    preset_path = PRESET_DIR / f"{preset}.yaml"
+    if not preset_path.exists():
+        raise FileNotFoundError(preset)
+
+    command = [sys.executable, "cli/intelligensi_deploy.py", "deploy", preset]
+    if preset == "ltx-worker-nebius-dev":
+        command = ["bash", "scripts/deploy_ltx_worker.sh", "dev"]
+
+    with ACTIVE_DEPLOY_LOCK:
+        process = ACTIVE_DEPLOY.get("process")
+        if process is not None and process.poll() is None:
+            return {
+                "ok": False,
+                "already_running": True,
+                "preset": ACTIVE_DEPLOY.get("preset"),
+                "pid": process.pid,
+            }
+
+        LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+        log_handle = LOG_PATH.open("a", encoding="utf-8")
+        log_handle.write(f"\n[UI] Starting deployment for preset {preset}\n")
+        log_handle.flush()
+
+        lambda_config = load_lambda_config()
+        env = os.environ.copy()
+        env["PYTHONUNBUFFERED"] = "1"
+        lambda_env_map = {
+            "api_key": "LAMBDALABS_API_KEY",
+            "ghcr_token": "GHCR_TOKEN",
+            "hf_token": "HF_TOKEN",
+            "ssh_key_name": "LAMBDA_SSH_KEY_NAME",
+            "ssh_private_key_path": "SSH_PRIVATE_KEY",
+        }
+        for config_key, env_key in lambda_env_map.items():
+            value = lambda_config.get(config_key, "").strip()
+            if value:
+                env[env_key] = value
+        process = subprocess.Popen(
+            command,
+            cwd=str(ROOT),
+            stdout=log_handle,
+            stderr=subprocess.STDOUT,
+            stdin=subprocess.DEVNULL,
+            env=env,
+        )
+        ACTIVE_DEPLOY["process"] = process
+        ACTIVE_DEPLOY["preset"] = preset
+        return {"ok": True, "preset": preset, "pid": process.pid}
+
+
+def _empty_lambda_config() -> Dict[str, str]:
+    return {
+        "api_key": "",
+        "ghcr_token": "",
+        "hf_token": "",
+        "region": "us-east-1",
+        "instance_type": "gpu_1x_a10",
+        "ssh_key_name": "intelligensi-lambda",
+        "ssh_private_key_path": "~/.ssh/intelligensi_lambda",
+        "ssh_username": "ubuntu",
+        "docker_image": "ghcr.io/intelligensi-ai/intelligensi-image-server:latest",
+        "model_id": "black-forest-labs/FLUX.1-schnell",
+        "service_port": "8080",
+        "health_path": "/health",
+    }
+
+
+def load_lambda_config() -> Dict[str, str]:
+    config = _empty_lambda_config()
+    public_data = _safe_json(LAMBDA_CONFIG_PATH, {})
+    secret_data = _safe_json(LAMBDA_SECRET_PATH, {})
+
+    if isinstance(public_data, dict):
+        for key, value in public_data.items():
+            if key in config and value is not None:
+                config[key] = str(value)
+    if isinstance(secret_data, dict):
+        for key, value in secret_data.items():
+            if key in config and value is not None:
+                config[key] = str(value)
+    return config
+
+
+def _mask_lambda_config(config: Dict[str, str]) -> Dict[str, str]:
+    masked = config.copy()
+    for key in ("api_key", "ghcr_token", "hf_token"):
+        if masked.get(key):
+            masked[key] = ""
+    return masked
+
+
+def save_lambda_config(payload: Dict[str, Any]) -> Dict[str, str]:
+    current = load_lambda_config()
+    allowed_keys = set(current.keys())
+    updated = current.copy()
+
+    for key, value in payload.items():
+        if key not in allowed_keys:
+            continue
+        incoming = str(value).strip()
+        if key in {"api_key", "ghcr_token", "hf_token"} and incoming == "":
+            continue
+        updated[key] = incoming
+
+    public_fields = {
+        "region",
+        "instance_type",
+        "ssh_key_name",
+        "ssh_private_key_path",
+        "ssh_username",
+        "docker_image",
+        "model_id",
+        "service_port",
+        "health_path",
+    }
+    secret_fields = {"api_key", "ghcr_token", "hf_token"}
+
+    _write_json(LAMBDA_CONFIG_PATH, {key: updated[key] for key in public_fields})
+    _write_json(LAMBDA_SECRET_PATH, {key: updated[key] for key in secret_fields})
+    return updated
+
+
+def build_lambda_export_block(config: Dict[str, str]) -> str:
+    ordered_pairs = [
+        ("LAMBDALABS_API_KEY", config.get("api_key", "")),
+        ("GHCR_TOKEN", config.get("ghcr_token", "")),
+        ("HF_TOKEN", config.get("hf_token", "")),
+        ("LAMBDA_SSH_KEY_NAME", config.get("ssh_key_name", "")),
+        ("SSH_PRIVATE_KEY", config.get("ssh_private_key_path", "")),
+    ]
+    return "\n".join(f"export {key}={_shell_quote(value)}" for key, value in ordered_pairs)
+
+
+def build_lambda_commands(config: Dict[str, str]) -> List[str]:
+    return [
+        build_lambda_export_block(config),
+        "python3 cli/intelligensi_deploy.py deploy image-server-v13",
+        "python3 cli/intelligensi_deploy.py status image-server-v13",
+    ]
 
 
 def _empty_nebius_config() -> Dict[str, str]:
@@ -274,8 +426,15 @@ def build_snapshot(log_limit: int = 200) -> DashboardSnapshot:
     runtime_blob = _safe_json(RUNTIME_STATE_PATH, {})
     runtime_fleet = runtime_blob.get("fleet", {}) if isinstance(runtime_blob, dict) else {}
     merged_deployments = {}
+    valid_presets = _preset_names()
     if isinstance(deployments, dict):
-      merged_deployments.update(deployments)
+      merged_deployments.update(
+          {
+              name: state
+              for name, state in deployments.items()
+              if name in valid_presets or state.get("preset") in valid_presets
+          }
+      )
     if isinstance(runtime_fleet, dict):
       merged_deployments.update(runtime_fleet)
     logs = _tail_lines(LOG_PATH, log_limit)
@@ -345,6 +504,20 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             self._send_json(payload)
             return
 
+        if parsed.path == "/api/lambda-config":
+            config = load_lambda_config()
+            payload = {
+                "config": _mask_lambda_config(config),
+                "commands": build_lambda_commands(config),
+                "config_path": str(LAMBDA_CONFIG_PATH.relative_to(ROOT)),
+                "secret_path": str(LAMBDA_SECRET_PATH.relative_to(ROOT)),
+                "has_api_key": bool(config.get("api_key")),
+                "has_ghcr_token": bool(config.get("ghcr_token")),
+                "has_hf_token": bool(config.get("hf_token")),
+            }
+            self._send_json(payload)
+            return
+
         if parsed.path == "/api/logs":
             query = parse_qs(parsed.query)
             limit_raw = query.get("limit", ["200"])[0]
@@ -391,6 +564,41 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                 self.send_error(HTTPStatus.NOT_FOUND, "Unknown instance_id")
                 return
             self._send_json({"ok": True, "instance": instance})
+            return
+
+        if parsed.path == "/api/preset-deploy":
+            body = self._read_json_body()
+            preset = body.get("preset") if isinstance(body, dict) else None
+            if not isinstance(preset, str) or not preset.strip():
+                self.send_error(HTTPStatus.BAD_REQUEST, "Missing preset")
+                return
+            try:
+                payload = _start_preset_deploy(preset.strip())
+            except FileNotFoundError:
+                self.send_error(HTTPStatus.NOT_FOUND, "Unknown preset")
+                return
+            self._send_json(payload)
+            return
+
+        if parsed.path == "/api/lambda-config":
+            body = self._read_json_body()
+            config = save_lambda_config(body if isinstance(body, dict) else {})
+            payload = {
+                "ok": True,
+                "config": _mask_lambda_config(config),
+                "commands": build_lambda_commands(config),
+                "config_path": str(LAMBDA_CONFIG_PATH.relative_to(ROOT)),
+                "secret_path": str(LAMBDA_SECRET_PATH.relative_to(ROOT)),
+                "has_api_key": bool(config.get("api_key")),
+                "has_ghcr_token": bool(config.get("ghcr_token")),
+                "has_hf_token": bool(config.get("hf_token")),
+            }
+            self._send_json(payload)
+            return
+
+        if parsed.path == "/api/logs/clear":
+            LOG_PATH.write_text("", encoding="utf-8")
+            self._send_json({"ok": True, "path": str(LOG_PATH.relative_to(ROOT))})
             return
 
         self.send_error(HTTPStatus.NOT_FOUND, "Unknown endpoint")

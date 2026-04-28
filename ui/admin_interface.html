@@ -493,74 +493,133 @@
               <div class="timeline" id="timeline"></div>
             </div>
           </section>
+
+          <section class="panel">
+            <div class="section-header">
+              <h2>Flux Lambda Deploy</h2>
+              <div class="toolbar">
+                <button id="launch-flux-deploy">Launch</button>
+                <button class="ghost" id="copy-flux-command">Copy command</button>
+              </div>
+            </div>
+            <div class="section-body">
+              <div class="meta-list">
+                <article class="meta-card">
+                  <div class="meta-label">Preset</div>
+                  <div style="margin-top:8px">image-server-v13</div>
+                </article>
+                <article class="meta-card">
+                  <div class="meta-label">Model</div>
+                  <div style="margin-top:8px">black-forest-labs/FLUX.1-schnell</div>
+                </article>
+                <article class="meta-card">
+                  <div class="meta-label">Command</div>
+                  <div style="margin-top:8px">python cli/intelligensi_deploy.py deploy image-server-v13</div>
+                </article>
+              </div>
+              <div class="inline-note" id="flux-deploy-status">Ready to launch the Lambda GPU image-server flow.</div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="section-header">
+              <h2>LTX Video Worker</h2>
+              <div class="toolbar">
+                <button id="launch-ltx-deploy">Launch</button>
+                <button class="ghost" id="copy-ltx-command">Copy command</button>
+              </div>
+            </div>
+            <div class="section-body">
+              <div class="meta-list">
+                <article class="meta-card">
+                  <div class="meta-label">Preset</div>
+                  <div style="margin-top:8px">ltx-worker-nebius-dev</div>
+                </article>
+                <article class="meta-card">
+                  <div class="meta-label">Image</div>
+                  <div style="margin-top:8px">ghcr.io/intelligensi-ai/ltx-worker:latest</div>
+                </article>
+                <article class="meta-card">
+                  <div class="meta-label">Command</div>
+                  <div style="margin-top:8px">bash scripts/deploy_ltx_worker.sh dev</div>
+                </article>
+              </div>
+              <div class="inline-note" id="ltx-deploy-status">Ready once the GHCR image push finishes.</div>
+            </div>
+          </section>
         </div>
 
         <div class="stack">
           <section class="panel">
             <div class="section-header">
-              <h2>Nebius Config</h2>
+              <h2>Lambda Config</h2>
               <div class="toolbar">
-                <button id="save-nebius-config">Save</button>
-                <button class="ghost" id="copy-nebius-exports">Copy exports</button>
+                <button id="save-lambda-config">Save</button>
+                <button class="ghost" id="copy-lambda-exports">Copy exports</button>
               </div>
             </div>
             <div class="section-body">
               <div class="config-grid">
                 <div class="field">
-                  <label for="project_id">Project ID</label>
-                  <input id="project_id" />
+                  <label for="lambda_api_key">Lambda API Key</label>
+                  <input id="lambda_api_key" type="password" />
                 </div>
                 <div class="field">
-                  <label for="api_token">API Token</label>
-                  <input id="api_token" type="password" />
+                  <label for="lambda_region">Region</label>
+                  <input id="lambda_region" />
+                </div>
+                <div class="field">
+                  <label for="lambda_instance_type">Instance Type</label>
+                  <input id="lambda_instance_type" />
+                </div>
+                <div class="field">
+                  <label for="lambda_ssh_key_name">SSH Key Name</label>
+                  <input id="lambda_ssh_key_name" />
                 </div>
                 <div class="field full">
-                  <label for="ssh_public_key_path">SSH Public Key Path</label>
-                  <input id="ssh_public_key_path" />
+                  <label for="lambda_ssh_private_key_path">SSH Private Key Path</label>
+                  <input id="lambda_ssh_private_key_path" />
+                </div>
+                <div class="field">
+                  <label for="lambda_ssh_username">SSH Username</label>
+                  <input id="lambda_ssh_username" />
+                </div>
+                <div class="field">
+                  <label for="lambda_service_port">Service Port</label>
+                  <input id="lambda_service_port" />
                 </div>
                 <div class="field full">
-                  <label for="ssh_private_key_path">SSH Private Key Path</label>
-                  <input id="ssh_private_key_path" />
+                  <label for="lambda_docker_image">Docker Image</label>
+                  <input id="lambda_docker_image" />
+                </div>
+                <div class="field full">
+                  <label for="lambda_model_id">Model ID</label>
+                  <input id="lambda_model_id" />
                 </div>
                 <div class="field">
-                  <label for="ssh_username">SSH Username</label>
-                  <input id="ssh_username" />
+                  <label for="lambda_health_path">Health Path</label>
+                  <input id="lambda_health_path" />
                 </div>
                 <div class="field">
-                  <label for="public_ip">Existing Nebius VM IP</label>
-                  <input id="public_ip" />
+                  <label for="lambda_ghcr_token">GHCR Token</label>
+                  <input id="lambda_ghcr_token" type="password" />
                 </div>
                 <div class="field">
-                  <label for="instance_name">Instance Name</label>
-                  <input id="instance_name" />
-                </div>
-                <div class="field">
-                  <label for="gpu_shape">GPU Shape</label>
-                  <input id="gpu_shape" />
-                </div>
-                <div class="field">
-                  <label for="disk_size_gb">Disk Size GB</label>
-                  <input id="disk_size_gb" />
-                </div>
-                <div class="field">
-                  <label for="region">Region</label>
-                  <input id="region" />
-                </div>
-                <div class="field">
-                  <label for="zone">Zone</label>
-                  <input id="zone" />
+                  <label for="lambda_hf_token">Hugging Face Token</label>
+                  <input id="lambda_hf_token" type="password" />
                 </div>
               </div>
-              <div class="inline-note" id="config-paths">Local config storage files will appear here.</div>
+              <div class="inline-note" id="lambda-config-paths">Local Lambda config storage files will appear here.</div>
               <div class="warning-note">
-                Nebius credentials entered here are stored locally on disk for operator convenience.
+                Lambda, GHCR, and Hugging Face credentials entered here are stored locally on disk for operator convenience.
                 This is not a vault or managed secret store. Do not commit the generated config files.
               </div>
-              <div class="save-status" id="save-status"></div>
+              <pre id="lambda-commands">Waiting for Lambda config...</pre>
+              <div class="save-status" id="lambda-save-status"></div>
             </div>
           </section>
 
-          <section class="panel">
+          <section class="panel" hidden>
             <div class="section-header">
               <h2>ComfyUI Workflow Commands</h2>
               <div class="toolbar">
@@ -596,7 +655,10 @@
           <section class="panel log-panel">
             <div class="section-header">
               <h2>Recent Logs</h2>
-              <button class="ghost" id="refresh-logs">Tail logs</button>
+              <div class="toolbar">
+                <button class="ghost" id="refresh-logs">Tail logs</button>
+                <button class="ghost" id="clear-logs">Clear logs</button>
+              </div>
             </div>
             <div class="section-body">
               <pre id="logs">Waiting for log data…</pre>
@@ -620,22 +682,26 @@
       const fixList = document.getElementById("fix-list");
       const metaList = document.getElementById("meta-list");
       const logBlock = document.getElementById("logs");
-      const nebiusCommands = document.getElementById("nebius-commands");
-      const saveStatus = document.getElementById("save-status");
-      const configPaths = document.getElementById("config-paths");
-      const serviceUrlNote = document.getElementById("service-url-note");
-      const nebiusFields = [
-        "project_id",
-        "api_token",
-        "ssh_public_key_path",
-        "ssh_private_key_path",
-        "ssh_username",
-        "public_ip",
-        "instance_name",
-        "gpu_shape",
-        "disk_size_gb",
-        "region",
-        "zone",
+      const fluxDeployStatus = document.getElementById("flux-deploy-status");
+      const fluxDeployCommand = "python cli/intelligensi_deploy.py deploy image-server-v13";
+      const ltxDeployStatus = document.getElementById("ltx-deploy-status");
+      const ltxDeployCommand = "bash scripts/deploy_ltx_worker.sh dev";
+      const lambdaCommands = document.getElementById("lambda-commands");
+      const lambdaSaveStatus = document.getElementById("lambda-save-status");
+      const lambdaConfigPaths = document.getElementById("lambda-config-paths");
+      const lambdaFields = [
+        ["api_key", "lambda_api_key"],
+        ["region", "lambda_region"],
+        ["instance_type", "lambda_instance_type"],
+        ["ssh_key_name", "lambda_ssh_key_name"],
+        ["ssh_private_key_path", "lambda_ssh_private_key_path"],
+        ["ssh_username", "lambda_ssh_username"],
+        ["service_port", "lambda_service_port"],
+        ["docker_image", "lambda_docker_image"],
+        ["model_id", "lambda_model_id"],
+        ["health_path", "lambda_health_path"],
+        ["ghcr_token", "lambda_ghcr_token"],
+        ["hf_token", "lambda_hf_token"],
       ];
 
       const escapeHtml = (value) =>
@@ -817,6 +883,52 @@
         saveStatus.textContent = "Saved locally. Use the workflow block below to run the ComfyUI deploy path.";
       }
 
+      function getLambdaFormPayload() {
+        return Object.fromEntries(
+          lambdaFields.map(([key, id]) => [key, document.getElementById(id).value.trim()])
+        );
+      }
+
+      function renderLambdaConfig(payload) {
+        const config = payload.config || {};
+        for (const [key, id] of lambdaFields) {
+          document.getElementById(id).value = config[key] || "";
+        }
+        document.getElementById("lambda_api_key").placeholder = payload.has_api_key
+          ? "Stored locally. Enter a new value only to replace it."
+          : "";
+        document.getElementById("lambda_ghcr_token").placeholder = payload.has_ghcr_token
+          ? "Stored locally. Enter a new value only to replace it."
+          : "";
+        document.getElementById("lambda_hf_token").placeholder = payload.has_hf_token
+          ? "Stored locally. Enter a new value only to replace it."
+          : "";
+        lambdaCommands.textContent = (payload.commands || []).join("\n\n");
+        lambdaConfigPaths.textContent = payload.config_path && payload.secret_path
+          ? `Stored locally in ${payload.config_path} and ${payload.secret_path}.`
+          : "Local config storage files will appear here.";
+      }
+
+      async function loadLambdaConfig() {
+        const response = await fetch("/api/lambda-config");
+        const payload = await response.json();
+        renderLambdaConfig(payload);
+      }
+
+      async function saveLambdaConfig() {
+        lambdaSaveStatus.textContent = "Saving...";
+        const response = await fetch("/api/lambda-config", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(getLambdaFormPayload()),
+        });
+        const payload = await response.json();
+        renderLambdaConfig(payload);
+        lambdaSaveStatus.textContent = "Saved locally. Launch will use these Lambda settings.";
+      }
+
       async function copyTextBlock(text) {
         await navigator.clipboard.writeText(text);
       }
@@ -835,6 +947,48 @@
         await loadOverview();
       }
 
+      async function launchFluxDeploy() {
+        fluxDeployStatus.textContent = "Starting Flux Lambda deployment...";
+        const response = await fetch("/api/preset-deploy", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ preset: "image-server-v13" }),
+        });
+        const payload = await response.json();
+        if (!response.ok || payload.ok === false) {
+          fluxDeployStatus.textContent = payload.already_running
+            ? `Deployment already running for ${payload.preset}. PID ${payload.pid}.`
+            : `Launch failed. Check deploy.log.`;
+          await loadLogs();
+          return;
+        }
+        fluxDeployStatus.textContent = `Deployment started. PID ${payload.pid}. Watch Recent Logs.`;
+        await Promise.all([loadOverview(), loadLogs()]);
+      }
+
+      async function launchLtxDeploy() {
+        ltxDeployStatus.textContent = "Starting LTX worker deployment...";
+        const response = await fetch("/api/preset-deploy", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ preset: "ltx-worker-nebius-dev" }),
+        });
+        const payload = await response.json();
+        if (!response.ok || payload.ok === false) {
+          ltxDeployStatus.textContent = payload.already_running
+            ? `Deployment already running for ${payload.preset}. PID ${payload.pid}.`
+            : `Launch failed. Check deploy.log.`;
+          await loadLogs();
+          return;
+        }
+        ltxDeployStatus.textContent = `Deployment started. PID ${payload.pid}. Watch Recent Logs.`;
+        await Promise.all([loadOverview(), loadLogs()]);
+      }
+
       async function loadLogs() {
         const response = await fetch("/api/logs?limit=220");
         const payload = await response.json();
@@ -843,9 +997,14 @@
           : "No deploy.log file found yet. Run a deployment through the stateful workflow to populate logs.";
       }
 
+      async function clearLogs() {
+        const response = await fetch("/api/logs/clear", { method: "POST" });
+        logBlock.textContent = response.ok ? "Logs cleared." : "Failed to clear logs.";
+      }
+
       async function refreshAll() {
         try {
-          await Promise.all([loadOverview(), loadLogs(), loadNebiusConfig()]);
+          await Promise.all([loadOverview(), loadLogs(), loadLambdaConfig()]);
         } catch (error) {
           logBlock.textContent = `Dashboard refresh failed: ${error}`;
         }
@@ -854,6 +1013,17 @@
       document.getElementById("refresh-overview").addEventListener("click", loadOverview);
       document.getElementById("refresh-history").addEventListener("click", loadOverview);
       document.getElementById("refresh-logs").addEventListener("click", loadLogs);
+      document.getElementById("clear-logs").addEventListener("click", clearLogs);
+      document.getElementById("launch-flux-deploy").addEventListener("click", launchFluxDeploy);
+      document.getElementById("copy-flux-command").addEventListener("click", async () => {
+        await copyTextBlock(fluxDeployCommand);
+        fluxDeployStatus.textContent = "Copied Flux deploy command.";
+      });
+      document.getElementById("launch-ltx-deploy").addEventListener("click", launchLtxDeploy);
+      document.getElementById("copy-ltx-command").addEventListener("click", async () => {
+        await copyTextBlock(ltxDeployCommand);
+        ltxDeployStatus.textContent = "Copied LTX deploy command.";
+      });
       deploymentList.addEventListener("click", async (event) => {
         const target = event.target;
         if (!(target instanceof HTMLElement)) return;
@@ -862,38 +1032,17 @@
         const instanceId = target.dataset.instanceId;
         if (!action || !instanceId) return;
         try {
-          saveStatus.textContent = `Applying ${action} to ${instanceId}…`;
+          lambdaSaveStatus.textContent = `Applying ${action} to ${instanceId}...`;
           await updateFleetInstance(action, instanceId);
-          saveStatus.textContent = `Applied ${action} to ${instanceId}.`;
+          lambdaSaveStatus.textContent = `Applied ${action} to ${instanceId}.`;
         } catch (error) {
-          saveStatus.textContent = `Fleet control failed: ${error}`;
+          lambdaSaveStatus.textContent = `Fleet control failed: ${error}`;
         }
       });
-      document.getElementById("save-nebius-config").addEventListener("click", saveNebiusConfig);
-      document.getElementById("copy-nebius-exports").addEventListener("click", async () => {
-        await copyTextBlock((nebiusCommands.textContent || "").split("\n\n./scripts/")[0] || "");
-        saveStatus.textContent = "Copied Nebius export block.";
-      });
-      document.getElementById("copy-nebius-workflow").addEventListener("click", async () => {
-        await copyTextBlock(nebiusCommands.textContent || "");
-        saveStatus.textContent = "Copied ComfyUI workflow commands.";
-      });
-      document.getElementById("copy-service-url").addEventListener("click", async () => {
-        const url = serviceUrlNote.textContent.replace("ComfyUI should be reachable at ", "").trim();
-        if (!url.startsWith("http")) {
-          saveStatus.textContent = "No ComfyUI service URL available yet.";
-          return;
-        }
-        await copyTextBlock(url);
-        saveStatus.textContent = "Copied ComfyUI service URL.";
-      });
-      document.getElementById("open-service-url").addEventListener("click", async () => {
-        const url = serviceUrlNote.textContent.replace("ComfyUI should be reachable at ", "").trim();
-        if (!url.startsWith("http")) {
-          saveStatus.textContent = "No ComfyUI service URL available yet.";
-          return;
-        }
-        window.open(url, "_blank", "noopener,noreferrer");
+      document.getElementById("save-lambda-config").addEventListener("click", saveLambdaConfig);
+      document.getElementById("copy-lambda-exports").addEventListener("click", async () => {
+        await copyTextBlock((lambdaCommands.textContent || "").split("\n\n./")[0] || "");
+        lambdaSaveStatus.textContent = "Copied Lambda export block.";
       });
 
       refreshAll();
