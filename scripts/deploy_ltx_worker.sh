@@ -4,6 +4,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SERVICE_DIR="$ROOT_DIR/services/ltx-worker"
 ENV_FILE="$SERVICE_DIR/service.env"
+MODEL_ENV_FILE="$SERVICE_DIR/model.env"
+PROVIDER_ENV_FILE="$SERVICE_DIR/provider.nebius.env"
 REMOTE_SERVICE_ROOT="/opt/intelligensi/ltx-worker"
 LOCAL_TAG_BASE="intelligensi/ltx-worker"
 LOG_FILE="$ROOT_DIR/deploy.log"
@@ -12,13 +14,28 @@ exec > >(tee -a "$LOG_FILE") 2>&1
 
 ENVIRONMENT="${1:-dev}"
 
-if [[ ! -f "$ENV_FILE" ]]; then
-  echo "[Deploy] Missing env file: $ENV_FILE" >&2
-  echo "[Deploy] Create it from $SERVICE_DIR/service.env.example" >&2
+if [[ -f "$ENV_FILE" ]]; then
+  source "$ENV_FILE"
+fi
+
+if [[ -f "$PROVIDER_ENV_FILE" ]]; then
+  source "$PROVIDER_ENV_FILE"
+fi
+if [[ -f "$MODEL_ENV_FILE" ]]; then
+  source "$MODEL_ENV_FILE"
+fi
+
+if [[ ! -f "$ENV_FILE" && ! -f "$PROVIDER_ENV_FILE" ]]; then
+  echo "[Deploy] Missing Nebius provider config: $PROVIDER_ENV_FILE" >&2
+  echo "[Deploy] This Nebius VM deploy path needs host/SSH settings such as NEBIUS_IP." >&2
+  echo "[Deploy] Create it from $SERVICE_DIR/provider.nebius.env.example, or use the Lambda preset path for Lambda-hosted workers." >&2
   exit 1
 fi
 
-source "$ENV_FILE"
+if [[ ! -f "$ENV_FILE" && ! -f "$MODEL_ENV_FILE" ]]; then
+  echo "[Deploy] Model env file not found: $MODEL_ENV_FILE" >&2
+  echo "[Deploy] Continuing with built-in LTX model/runtime defaults." >&2
+fi
 
 GPU_IP="${NEBIUS_IP:-}"
 SSH_USERNAME="${SSH_USERNAME:-ubuntu}"
@@ -29,7 +46,9 @@ ARCHIVE_PATH="/tmp/ltx-worker-${ENVIRONMENT}.tar"
 REMOTE_IMAGE="${LTX_REGISTRY_IMAGE:-}"
 
 if [[ -z "$GPU_IP" ]]; then
-  echo "[Deploy] NEBIUS_IP missing in $ENV_FILE" >&2
+  echo "[Deploy] NEBIUS_IP missing in Nebius provider config" >&2
+  echo "[Deploy] NEBIUS_IP is provider host configuration, not an LTX model setting." >&2
+  echo "[Deploy] Set it in $PROVIDER_ENV_FILE or use the Lambda preset path for Lambda-hosted workers." >&2
   exit 1
 fi
 
@@ -113,4 +132,3 @@ ssh -i "$SSH_KEY_PATH" -o StrictHostKeyChecking=no "${SSH_USERNAME}@${GPU_IP}" "
 "
 
 echo "[Deploy] LTX worker deployed at http://${GPU_IP}:${SERVICE_PORT}"
-

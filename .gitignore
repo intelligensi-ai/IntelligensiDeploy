@@ -14,6 +14,11 @@ __pycache__/
 .intelligensi_nebius_secrets.json
 .intelligensi_lambda_config.json
 .intelligensi_lambda_secrets.json
+.intelligensi_lambda_availability.json
+.intelligensi_lambda_health.json
+.intelligensi_lambda_instance_status.json
+.intelligensi_repairs.json
+.intelligensi_state.json
 .intelligensi_runtime.json
 services/comfyui-service/service.env
 services/ltx-worker/service.env

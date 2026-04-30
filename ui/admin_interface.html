@@ -54,6 +54,11 @@
         backdrop-filter: blur(18px);
       }
 
+      .panel.is-collapsed .section-body,
+      .panel.is-collapsed.panel-collapsible > :not(.section-header) {
+        display: none;
+      }
+
       .hero-copy {
         padding: 28px 30px 26px;
         position: relative;
@@ -140,6 +145,81 @@
         font-family: "Sora", sans-serif;
         font-size: 28px;
         letter-spacing: -0.04em;
+        overflow-wrap: anywhere;
+      }
+
+      .stat-note {
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.45;
+        overflow-wrap: anywhere;
+      }
+
+      .health-indicator {
+        margin-top: 14px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.45;
+      }
+
+      .health-light {
+        width: 14px;
+        height: 14px;
+        border-radius: 999px;
+        background: #6f8190;
+        box-shadow: 0 0 0 5px rgba(111, 129, 144, 0.12);
+        flex: 0 0 auto;
+      }
+
+      .health-light.is-checking {
+        background: #ffd166;
+        box-shadow: 0 0 0 5px rgba(255, 209, 102, 0.16);
+      }
+
+      .health-light.is-healthy {
+        background: var(--success);
+        box-shadow: 0 0 0 5px rgba(120, 242, 179, 0.16), 0 0 18px rgba(120, 242, 179, 0.34);
+      }
+
+      .health-light.is-down {
+        background: var(--danger);
+        box-shadow: 0 0 0 5px rgba(255, 95, 109, 0.16), 0 0 18px rgba(255, 95, 109, 0.28);
+      }
+
+      .active-deployment.is-active {
+        color: var(--success);
+        animation: pulse-active 1.5s ease-in-out infinite;
+      }
+
+      @keyframes pulse-active {
+        0%,
+        100% {
+          opacity: 1;
+          text-shadow: 0 0 0 rgba(120, 242, 179, 0);
+        }
+        50% {
+          opacity: 0.72;
+          text-shadow: 0 0 18px rgba(120, 242, 179, 0.32);
+        }
+      }
+
+      .danger-button {
+        width: 100%;
+        border-radius: 18px;
+        padding: 18px 20px;
+        background: linear-gradient(135deg, #ff4f4f, #b91525);
+        color: #fff;
+        box-shadow: 0 16px 42px rgba(255, 79, 79, 0.22);
+      }
+
+      .danger-button:disabled {
+        cursor: not-allowed;
+        opacity: 0.58;
+        box-shadow: none;
       }
 
       .status-chip {
@@ -188,12 +268,17 @@
       .grid {
         display: grid;
         grid-template-columns: 1.2fr 0.8fr;
-        gap: 18px;
+        gap: 14px;
+        align-items: start;
+        min-width: 0;
       }
 
       .stack {
         display: grid;
-        gap: 18px;
+        gap: 14px;
+        align-content: start;
+        align-self: start;
+        min-width: 0;
       }
 
       .section-header {
@@ -202,6 +287,7 @@
         align-items: center;
         gap: 12px;
         padding: 24px 24px 10px;
+        min-width: 0;
       }
 
       .section-header h2 {
@@ -209,10 +295,46 @@
         font-family: "Sora", sans-serif;
         font-size: 22px;
         letter-spacing: -0.04em;
+        min-width: 0;
+      }
+
+      .panel-title-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+
+      .panel-title-row h2 {
+        min-width: 0;
+      }
+
+      .panel-toggle {
+        width: 34px;
+        height: 34px;
+        padding: 0;
+        display: inline-grid;
+        place-items: center;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--text);
+        border: 1px solid var(--line);
+        flex: 0 0 auto;
+      }
+
+      .panel-toggle::before {
+        content: "−";
+        font-size: 20px;
+        line-height: 1;
+      }
+
+      .panel.is-collapsed .panel-toggle::before {
+        content: "+";
       }
 
       .section-body {
         padding: 0 24px 24px;
+        min-width: 0;
       }
 
       .deployment-list,
@@ -307,6 +429,7 @@
       .field {
         display: grid;
         gap: 6px;
+        min-width: 0;
       }
 
       .field label {
@@ -316,14 +439,20 @@
         letter-spacing: 0.12em;
       }
 
-      .field input {
+      .field input,
+      .field select {
         width: 100%;
+        min-width: 0;
         border-radius: 14px;
         border: 1px solid rgba(139, 194, 214, 0.18);
         background: rgba(255, 255, 255, 0.04);
         color: var(--text);
         padding: 12px 14px;
         font: inherit;
+      }
+
+      .field select {
+        color-scheme: dark;
       }
 
       .field.full {
@@ -335,6 +464,7 @@
         color: var(--muted);
         font-size: 13px;
         line-height: 1.5;
+        overflow-wrap: anywhere;
       }
 
       .warning-note {
@@ -361,6 +491,7 @@
       pre {
         margin: 0;
         padding: 18px;
+        max-width: 100%;
         border-radius: 20px;
         background: #041019;
         border: 1px solid rgba(109, 226, 207, 0.12);
@@ -370,12 +501,17 @@
         line-height: 1.55;
         max-height: 520px;
         overflow: auto;
+        white-space: pre-wrap;
+        overflow-wrap: anywhere;
       }
 
       .toolbar {
         display: flex;
         gap: 10px;
         align-items: center;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        min-width: 0;
       }
 
       button {
@@ -401,6 +537,157 @@
         color: var(--muted);
         text-align: center;
         font-size: 13px;
+      }
+
+      .lambda-config-panel .config-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .availability-list {
+        display: grid;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .availability-card {
+        padding: 14px;
+        border-radius: 16px;
+        border: 1px solid rgba(139, 194, 214, 0.14);
+        background: rgba(255, 255, 255, 0.035);
+      }
+
+      .availability-card.is-compact {
+        padding: 10px 12px;
+      }
+
+      .availability-card.is-compact .availability-compact-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .availability-card.is-compact strong {
+        font-size: 13px;
+        color: var(--muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .availability-card.is-compact .availability-meta {
+        margin-top: 0;
+        font-size: 12px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .availability-card.is-compact .availability-details {
+        margin-top: 8px;
+      }
+
+      .availability-card strong {
+        display: block;
+        overflow-wrap: anywhere;
+      }
+
+      .availability-meta {
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.5;
+        overflow-wrap: anywhere;
+      }
+
+      .availability-details {
+        margin-top: 12px;
+      }
+
+      .availability-details summary {
+        cursor: pointer;
+        color: var(--accent);
+        font-size: 13px;
+        font-weight: 800;
+      }
+
+      .availability-detail-grid {
+        margin-top: 10px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+
+      .availability-detail-item {
+        padding: 10px;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.035);
+        border: 1px solid rgba(139, 194, 214, 0.12);
+        min-width: 0;
+      }
+
+      .availability-detail-item span {
+        display: block;
+        color: var(--muted);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+      }
+
+      .availability-detail-item strong {
+        margin-top: 4px;
+        font-size: 13px;
+        font-family: "SFMono-Regular", "JetBrains Mono", monospace;
+        font-weight: 700;
+      }
+
+      .availability-raw {
+        margin-top: 10px;
+        max-height: 220px;
+      }
+
+      .availability-card.is-recommended {
+        border-color: rgba(109, 226, 207, 0.48);
+      }
+
+      .availability-card.is-unavailable {
+        opacity: 0.68;
+      }
+
+      .preview-output {
+        margin-top: 14px;
+        display: grid;
+        gap: 10px;
+      }
+
+      .preview-output img,
+      .preview-output video {
+        width: 100%;
+        max-height: 520px;
+        object-fit: contain;
+        border-radius: 16px;
+        border: 1px solid rgba(139, 194, 214, 0.14);
+        background: #041019;
+      }
+
+      .preview-history-item {
+        padding: 12px 14px;
+        border-radius: 14px;
+        border: 1px solid rgba(139, 194, 214, 0.14);
+        background: rgba(255, 255, 255, 0.035);
+        display: grid;
+        gap: 8px;
+      }
+
+      .preview-history-title {
+        font-weight: 800;
+      }
+
+      .preview-history-meta {
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.45;
+        overflow-wrap: anywhere;
       }
 
       @media (max-width: 1100px) {
@@ -431,6 +718,10 @@
           grid-template-columns: 1fr;
         }
 
+        .availability-detail-grid {
+          grid-template-columns: 1fr;
+        }
+
         .toolbar {
           flex-wrap: wrap;
         }
@@ -455,16 +746,23 @@
         </article>
         <aside class="panel hero-stats">
           <div class="stat-card">
-            <div class="stat-label">Workflow State</div>
-            <div class="stat-value" id="current-state">Idle</div>
+            <div class="stat-label">Status</div>
+            <div class="stat-value" id="connection-status">Connected</div>
+            <div class="stat-note">Dashboard backend is reachable.</div>
+            <div class="health-indicator">
+              <span class="health-light" id="instance-health-light"></span>
+              <span id="instance-health-text">Instance health not checked yet.</span>
+            </div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">Tracked Deployments</div>
-            <div class="stat-value" id="deployment-count">0</div>
+            <div class="stat-label">Current Active Deployment</div>
+            <div class="stat-value active-deployment" id="active-deployment-name">None</div>
+            <div class="stat-note" id="active-deployment-detail">No active Lambda instance recorded.</div>
           </div>
           <div class="stat-card">
-            <div class="stat-label">Suggested Fixes</div>
-            <div class="stat-value" id="suggestion-count">0</div>
+            <button class="danger-button" id="cancel-active-instance">Cancel & Delete Instance</button>
+            <button class="ghost" id="cleanup-stale-instance" style="width:100%; margin-top:10px">Clear stale record</button>
+            <div class="stat-note" id="cancel-instance-status">Deletes the active Lambda instance to stop GPU billing.</div>
           </div>
         </aside>
       </section>
@@ -499,6 +797,8 @@
               <h2>Flux Lambda Deploy</h2>
               <div class="toolbar">
                 <button id="launch-flux-deploy">Launch</button>
+                <button class="ghost" id="check-flux-health">Health check</button>
+                <button class="ghost" id="heal-flux-health">Auto heal</button>
                 <button class="ghost" id="copy-flux-command">Copy command</button>
               </div>
             </div>
@@ -517,7 +817,26 @@
                   <div style="margin-top:8px">python cli/intelligensi_deploy.py deploy image-server-v13</div>
                 </article>
               </div>
+              <div class="config-grid">
+                <div class="field full">
+                  <label for="flux_docker_image">Docker Image</label>
+                  <input id="flux_docker_image" />
+                </div>
+                <div class="field full">
+                  <label for="flux_model_id">Model ID</label>
+                  <input id="flux_model_id" />
+                </div>
+                <div class="field">
+                  <label for="flux_service_port">Service Port</label>
+                  <input id="flux_service_port" />
+                </div>
+                <div class="field">
+                  <label for="flux_health_path">Health Path</label>
+                  <input id="flux_health_path" />
+                </div>
+              </div>
               <div class="inline-note" id="flux-deploy-status">Ready to launch the Lambda GPU image-server flow.</div>
+              <div class="inline-note" id="flux-health-status">Health status will appear here after a check.</div>
             </div>
           </section>
 
@@ -533,7 +852,7 @@
               <div class="meta-list">
                 <article class="meta-card">
                   <div class="meta-label">Preset</div>
-                  <div style="margin-top:8px">ltx-worker-nebius-dev</div>
+                  <div style="margin-top:8px">ltx-worker-lambda</div>
                 </article>
                 <article class="meta-card">
                   <div class="meta-label">Image</div>
@@ -541,16 +860,120 @@
                 </article>
                 <article class="meta-card">
                   <div class="meta-label">Command</div>
-                  <div style="margin-top:8px">bash scripts/deploy_ltx_worker.sh dev</div>
+                  <div style="margin-top:8px">python cli/intelligensi_deploy.py deploy ltx-worker-lambda</div>
                 </article>
               </div>
-              <div class="inline-note" id="ltx-deploy-status">Ready once the GHCR image push finishes.</div>
+              <div class="config-grid">
+                <div class="field full">
+                  <label for="ltx_docker_image">Docker Image</label>
+                  <input id="ltx_docker_image" />
+                </div>
+                <div class="field full">
+                  <label for="ltx_model_id">Model ID</label>
+                  <input id="ltx_model_id" />
+                </div>
+                <div class="field">
+                  <label for="ltx_service_port">Service Port</label>
+                  <input id="ltx_service_port" />
+                </div>
+                <div class="field">
+                  <label for="ltx_health_path">Health Path</label>
+                  <input id="ltx_health_path" />
+                </div>
+              </div>
+              <div class="inline-note" id="ltx-deploy-status">Ready to launch the Lambda GPU LTX worker flow.</div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="section-header">
+              <h2>Inference Preview</h2>
+              <div class="toolbar">
+                <button id="generate-preview">Generate</button>
+                <button class="ghost" id="refresh-preview-config">Detect</button>
+              </div>
+            </div>
+            <div class="section-body">
+              <div class="config-grid">
+                <div class="field full">
+                  <label for="preview_prompt">Prompt</label>
+                  <input id="preview_prompt" value="A cinematic tracking shot through a futuristic AI deployment control room, glowing GPU server racks, transparent dashboard screens, subtle teal and white light, realistic reflections, smooth camera movement, high detail, premium infrastructure product film, no text, no logos, no people" />
+                </div>
+                <div class="field">
+                  <label for="preview_profile">Service / Model</label>
+                  <select id="preview_profile"></select>
+                </div>
+                <div class="field">
+                  <label for="preview_inference">Inference</label>
+                  <select id="preview_inference">
+                    <option value="auto">Auto detect</option>
+                    <option value="image">Image</option>
+                    <option value="video">Video</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="preview_quality">Quality Mode</label>
+                  <select id="preview_quality">
+                    <option value="fast">Fast test</option>
+                    <option value="balanced">Balanced</option>
+                    <option value="best">Best A10</option>
+                    <option value="manual">Manual</option>
+                  </select>
+                </div>
+                <div class="field">
+                  <label for="preview_resolution">Resolution</label>
+                  <select id="preview_resolution"></select>
+                </div>
+                <div class="field">
+                  <label for="preview_seconds">Seconds</label>
+                  <input id="preview_seconds" type="number" value="2" min="1" step="1" />
+                </div>
+                <div class="field">
+                  <label for="preview_steps">Steps</label>
+                  <input id="preview_steps" type="number" value="8" min="1" max="12" />
+                </div>
+                <div class="field">
+                  <label for="preview_guidance">Guidance</label>
+                  <input id="preview_guidance" type="number" value="3.5" min="0" max="20" step="0.1" />
+                </div>
+                <div class="field">
+                  <label for="preview_fps">FPS</label>
+                  <input id="preview_fps" type="number" value="24" min="1" max="60" />
+                </div>
+              </div>
+              <div class="inline-note" id="preview-status">Detect the active model, then generate a local preview.</div>
+              <div class="preview-output" id="preview-output"></div>
+              <div class="preview-output" id="preview-history"></div>
             </div>
           </section>
         </div>
 
         <div class="stack">
           <section class="panel">
+            <div class="section-header">
+              <h2>Lambda Availability</h2>
+              <div class="toolbar">
+                <button id="refresh-lambda-availability">Refresh</button>
+                <button class="ghost" id="select-lambda-gpu">Use selected GPU</button>
+              </div>
+            </div>
+            <div class="section-body">
+              <div class="config-grid">
+                <div class="field">
+                  <label for="lambda_availability_region">Region</label>
+                  <input id="lambda_availability_region" />
+                </div>
+                <div class="field">
+                  <label for="lambda_gpu_option">GPU Option</label>
+                  <select id="lambda_gpu_option"></select>
+                </div>
+              </div>
+              <div class="inline-note" id="lambda-availability-status">Refresh Lambda availability after saving an API key.</div>
+              <div class="availability-list" id="lambda-availability-list"></div>
+            </div>
+          </section>
+
+          <section class="panel lambda-config-panel">
             <div class="section-header">
               <h2>Lambda Config</h2>
               <div class="toolbar">
@@ -585,22 +1008,6 @@
                   <input id="lambda_ssh_username" />
                 </div>
                 <div class="field">
-                  <label for="lambda_service_port">Service Port</label>
-                  <input id="lambda_service_port" />
-                </div>
-                <div class="field full">
-                  <label for="lambda_docker_image">Docker Image</label>
-                  <input id="lambda_docker_image" />
-                </div>
-                <div class="field full">
-                  <label for="lambda_model_id">Model ID</label>
-                  <input id="lambda_model_id" />
-                </div>
-                <div class="field">
-                  <label for="lambda_health_path">Health Path</label>
-                  <input id="lambda_health_path" />
-                </div>
-                <div class="field">
                   <label for="lambda_ghcr_token">GHCR Token</label>
                   <input id="lambda_ghcr_token" type="password" />
                 </div>
@@ -609,6 +1016,10 @@
                   <input id="lambda_hf_token" type="password" />
                 </div>
               </div>
+              <input id="lambda_service_port" type="hidden" />
+              <input id="lambda_docker_image" type="hidden" />
+              <input id="lambda_model_id" type="hidden" />
+              <input id="lambda_health_path" type="hidden" />
               <div class="inline-note" id="lambda-config-paths">Local Lambda config storage files will appear here.</div>
               <div class="warning-note">
                 Lambda, GHCR, and Hugging Face credentials entered here are stored locally on disk for operator convenience.
@@ -631,6 +1042,21 @@
             <div class="section-body">
               <div class="inline-note" id="service-url-note">ComfyUI URL will appear here once a Nebius public IP is saved.</div>
               <pre id="nebius-commands">Waiting for Nebius config…</pre>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="section-header">
+              <h2>Repair State</h2>
+              <div class="toolbar">
+                <button id="analyze-repairs">Analyze logs</button>
+                <button class="ghost" id="retry-after-manual-fix">Retry</button>
+                <button class="ghost" id="clear-repairs">Clear</button>
+              </div>
+            </div>
+            <div class="section-body">
+              <div class="fix-list" id="repair-state"></div>
+              <div class="inline-note" id="repair-status">No repair attempts recorded yet.</div>
             </div>
           </section>
 
@@ -674,21 +1100,94 @@
 
     <script>
       const stateChip = document.getElementById("status-chip");
-      const currentState = document.getElementById("current-state");
-      const deploymentCount = document.getElementById("deployment-count");
-      const suggestionCount = document.getElementById("suggestion-count");
+      const connectionStatus = document.getElementById("connection-status");
+      const instanceHealthLight = document.getElementById("instance-health-light");
+      const instanceHealthText = document.getElementById("instance-health-text");
+      const activeDeploymentName = document.getElementById("active-deployment-name");
+      const activeDeploymentDetail = document.getElementById("active-deployment-detail");
+      const cancelInstanceStatus = document.getElementById("cancel-instance-status");
+      const cancelActiveInstance = document.getElementById("cancel-active-instance");
+      const cleanupStaleInstance = document.getElementById("cleanup-stale-instance");
       const deploymentList = document.getElementById("deployment-list");
       const timeline = document.getElementById("timeline");
       const fixList = document.getElementById("fix-list");
+      const repairState = document.getElementById("repair-state");
+      const repairStatus = document.getElementById("repair-status");
       const metaList = document.getElementById("meta-list");
       const logBlock = document.getElementById("logs");
       const fluxDeployStatus = document.getElementById("flux-deploy-status");
+      const fluxHealthStatus = document.getElementById("flux-health-status");
       const fluxDeployCommand = "python cli/intelligensi_deploy.py deploy image-server-v13";
       const ltxDeployStatus = document.getElementById("ltx-deploy-status");
-      const ltxDeployCommand = "bash scripts/deploy_ltx_worker.sh dev";
+      const ltxDeployCommand = "python cli/intelligensi_deploy.py deploy ltx-worker-lambda";
       const lambdaCommands = document.getElementById("lambda-commands");
       const lambdaSaveStatus = document.getElementById("lambda-save-status");
       const lambdaConfigPaths = document.getElementById("lambda-config-paths");
+      const lambdaAvailabilityRegion = document.getElementById("lambda_availability_region");
+      const lambdaGpuOption = document.getElementById("lambda_gpu_option");
+      const lambdaAvailabilityStatus = document.getElementById("lambda-availability-status");
+      const lambdaAvailabilityList = document.getElementById("lambda-availability-list");
+      const previewProfile = document.getElementById("preview_profile");
+      const previewPrompt = document.getElementById("preview_prompt");
+      const previewInference = document.getElementById("preview_inference");
+      const previewQuality = document.getElementById("preview_quality");
+      const previewResolution = document.getElementById("preview_resolution");
+      const previewSeconds = document.getElementById("preview_seconds");
+      const previewSteps = document.getElementById("preview_steps");
+      const previewGuidance = document.getElementById("preview_guidance");
+      const previewFps = document.getElementById("preview_fps");
+      const previewStatus = document.getElementById("preview-status");
+      const previewOutput = document.getElementById("preview-output");
+      const previewHistory = document.getElementById("preview-history");
+      let latestLambdaInstanceStatus = null;
+      let latestPreviewConfig = null;
+      let serviceProfiles = [];
+      let activeLambdaPreset = "";
+      const previewQualityModes = {
+        fast: {
+          label: "Fast test",
+          image: { resolution: "768x768", seconds: "1", steps: "4", guidance: "3.5", fps: "24" },
+          video: { resolution: "512x512", seconds: "1.375", frames: 33, steps: "8", guidance: "3.0", fps: "24" },
+        },
+        balanced: {
+          label: "Balanced",
+          image: { resolution: "1024x1024", seconds: "1", steps: "6", guidance: "3.5", fps: "24" },
+          video: { resolution: "768x768", seconds: "2.042", frames: 49, steps: "10", guidance: "3.5", fps: "24" },
+        },
+        best: {
+          label: "Best A10",
+          image: { resolution: "1024x1024", seconds: "1", steps: "8", guidance: "3.5", fps: "24" },
+          video: { resolution: "768x768", seconds: "2.708", frames: 65, steps: "12", guidance: "3.8", fps: "24" },
+        },
+      };
+      const lambdaProfiles = {
+        flux: {
+          docker_image: "ghcr.io/intelligensi-ai/intelligensi-image-server:latest",
+          model_id: "black-forest-labs/FLUX.1-schnell",
+          service_port: "8080",
+          health_path: "/health",
+        },
+        ltx: {
+          docker_image: "ghcr.io/intelligensi-ai/ltx-worker:latest",
+          model_id: "Lightricks/LTX-Video",
+          service_port: "8000",
+          health_path: "/health",
+        },
+      };
+      const serviceConfigFields = {
+        flux: {
+          docker_image: "flux_docker_image",
+          model_id: "flux_model_id",
+          service_port: "flux_service_port",
+          health_path: "flux_health_path",
+        },
+        ltx: {
+          docker_image: "ltx_docker_image",
+          model_id: "ltx_model_id",
+          service_port: "ltx_service_port",
+          health_path: "ltx_health_path",
+        },
+      };
       const lambdaFields = [
         ["api_key", "lambda_api_key"],
         ["region", "lambda_region"],
@@ -710,15 +1209,67 @@
           .replaceAll("<", "&lt;")
           .replaceAll(">", "&gt;");
 
+      function setupCollapsiblePanels() {
+        const storageKey = "intelligensi.collapsedPanels";
+        let collapsed = {};
+        try {
+          collapsed = JSON.parse(localStorage.getItem(storageKey) || "{}");
+        } catch {
+          collapsed = {};
+        }
+
+        document.querySelectorAll(".panel").forEach((panel, index) => {
+          if (panel.hidden) return;
+          panel.classList.add("panel-collapsible");
+          const header = panel.querySelector(".section-header");
+          if (!header) return;
+          const heading = header.querySelector("h2");
+          if (!heading) return;
+
+          const title = heading.textContent.trim() || `Panel ${index + 1}`;
+          const panelId = panel.dataset.panelId || title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || `panel-${index}`;
+          panel.dataset.panelId = panelId;
+
+          if (!heading.parentElement.classList.contains("panel-title-row")) {
+            const titleRow = document.createElement("div");
+            titleRow.className = "panel-title-row";
+            heading.replaceWith(titleRow);
+            titleRow.appendChild(heading);
+          }
+
+          const titleRow = heading.parentElement;
+          const toggle = document.createElement("button");
+          toggle.type = "button";
+          toggle.className = "panel-toggle";
+          toggle.setAttribute("aria-label", `Minimise ${title}`);
+          toggle.title = `Minimise ${title}`;
+          titleRow.prepend(toggle);
+
+          const applyState = (isCollapsed) => {
+            panel.classList.toggle("is-collapsed", isCollapsed);
+            toggle.setAttribute("aria-expanded", String(!isCollapsed));
+            toggle.setAttribute("aria-label", `${isCollapsed ? "Maximise" : "Minimise"} ${title}`);
+            toggle.title = `${isCollapsed ? "Maximise" : "Minimise"} ${title}`;
+          };
+
+          applyState(Boolean(collapsed[panelId]));
+          toggle.addEventListener("click", () => {
+            const next = !panel.classList.contains("is-collapsed");
+            collapsed[panelId] = next;
+            localStorage.setItem(storageKey, JSON.stringify(collapsed));
+            applyState(next);
+          });
+        });
+      }
+
       const friendlyDate = (value) => {
         if (!value) return "Unknown";
         const date = new Date(Number(value) ? Number(value) * 1000 : value);
         return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString();
       };
 
-      function renderDeployments(deployments) {
+      function renderDeployments(deployments, trackedCount) {
         const entries = Object.entries(deployments || {});
-        deploymentCount.textContent = String(entries.length);
 
         if (!entries.length) {
           deploymentList.innerHTML = '<div class="empty">No tracked deployments yet.</div>';
@@ -771,9 +1322,7 @@
           .join("");
       }
 
-      function renderFixes(issues, suggestions) {
-        suggestionCount.textContent = String((suggestions || []).length);
-
+      function renderFixes(issues, suggestions, suggestedCount) {
         const cards = [];
         if (issues?.length) {
           cards.push(`
@@ -794,6 +1343,137 @@
         }
 
         fixList.innerHTML = cards.length ? cards.join("") : '<div class="empty">No active fixes suggested right now.</div>';
+      }
+
+      function renderActiveDeployment(deployments) {
+        const entries = Object.entries(deployments || {});
+        const realLambdaDeployment = ([name, item]) => {
+          const provider = String(item?.providerType || item?.provider || "lambda").toLowerCase();
+          const preset = String(item?.preset || name || "");
+          const hasEndpoint = Boolean(item?.ip || item?.publicIp);
+          const hasInstanceId = Boolean(item?.instance_id || item?.id);
+          return provider === "lambda" && hasEndpoint && hasInstanceId && !preset.startsWith("lambda-");
+        };
+        const active = entries.find(([name, item]) => item?.preset === "ltx-worker-lambda" || name === "ltx-worker-lambda")
+          || entries.find(([name, item]) => item?.preset === "image-server-v13" || name === "image-server-v13")
+          || entries.find(realLambdaDeployment)
+          || entries.find(([, item]) => {
+            const status = String(item?.status || item?.container_status || "").toLowerCase();
+            const provider = String(item?.providerType || item?.provider || "").toLowerCase();
+            const endpoint = String(item?.endpoint || item?.ip || item?.publicIp || "").toLowerCase();
+            return provider === "lambda"
+              && endpoint
+              && endpoint !== "pending"
+              && !["stopped", "destroyed", "deleted"].includes(status);
+          });
+
+        if (!active) {
+          activeLambdaPreset = "";
+          activeDeploymentName.textContent = "None";
+          activeDeploymentName.classList.remove("is-active");
+          activeDeploymentDetail.textContent = "No active Lambda instance recorded.";
+          cancelActiveInstance.disabled = true;
+          cleanupStaleInstance.disabled = true;
+          return;
+        }
+
+        const [name, item] = active;
+        const instanceId = item.id || item.instance_id || name;
+        const endpoint = item.endpoint || item.ip || item.publicIp || "endpoint unknown";
+        activeLambdaPreset = item.preset || name;
+        activeDeploymentName.textContent = name;
+        activeDeploymentName.classList.add("is-active");
+        const cloud = latestLambdaInstanceStatus?.latest || latestLambdaInstanceStatus || {};
+        const cloudText = cloud.status
+          ? ` · Lambda: ${cloud.status}${cloud.checked_at ? ` checked ${friendlyDate(cloud.checked_at)}` : ""}`
+          : "";
+        activeDeploymentDetail.textContent = `${instanceId} · ${endpoint}${cloudText}`;
+        cancelActiveInstance.disabled = false;
+        cleanupStaleInstance.disabled = true;
+      }
+
+      function setInstanceHealth(status, text) {
+        instanceHealthLight.className = `health-light ${status ? `is-${status}` : ""}`.trim();
+        instanceHealthText.textContent = text;
+      }
+
+      function renderTopInstanceHealth(payload) {
+        const latest = payload.latest || payload;
+        const preset = latest.preset || activeLambdaPreset || "active instance";
+        const checked = latest.checked_at ? ` · checked ${friendlyDate(latest.checked_at)}` : "";
+        if (latest.healthy || latest.remote_healthy) {
+          const mode = latest.remote_healthy && !latest.healthy ? "healthy via SSH" : "healthy";
+          setInstanceHealth("healthy", `${preset}: ${mode}${checked}`);
+          return;
+        }
+        if (latest.error) {
+          setInstanceHealth("down", `${preset}: down · ${latest.error}`);
+          return;
+        }
+        setInstanceHealth("", "Instance health not checked yet.");
+      }
+
+      async function pollTopInstanceHealth() {
+        const preset = activeLambdaPreset;
+        if (!preset) {
+          setInstanceHealth("", "No active Lambda instance to check.");
+          return;
+        }
+        setInstanceHealth("checking", `Checking ${preset} health...`);
+        try {
+          const response = await fetch("/api/lambda-health/check", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ preset }),
+          });
+          const payload = await response.json();
+          renderTopInstanceHealth(payload);
+        } catch (error) {
+          setInstanceHealth("down", `Health poll failed: ${error}`);
+        }
+      }
+
+      function renderRepairState(payload) {
+        const latest = payload.latest;
+        if (!latest) {
+          repairState.innerHTML = '<div class="empty">No repair attempts recorded yet.</div>';
+          repairStatus.textContent = payload.path ? `Stored locally in ${payload.path}.` : "Repair state will appear after a failed deploy.";
+          return;
+        }
+        const classification = latest.classification || {};
+        const action = latest.action || {};
+        const evidence = classification.evidence || [];
+        const manualValues = latest.manual_values_needed || [];
+        const safeLocalAction = latest.safe_local_action || "";
+        repairState.innerHTML = `
+          <article class="fix-card">
+            <strong>${escapeHtml(classification.category || "unknown")}</strong>
+            <p>${escapeHtml(classification.recommended_action || "Review deployment logs.")}</p>
+          </article>
+          <article class="fix-card">
+            <strong>${escapeHtml(action.id || "manual")}</strong>
+            <p>${escapeHtml(action.description || "No action recorded.")}</p>
+          </article>
+          <article class="fix-card">
+            <strong>Evidence</strong>
+            <p>${escapeHtml(evidence.length ? evidence.join(" • ") : "No evidence lines recorded.")}</p>
+          </article>
+          ${safeLocalAction ? `
+            <article class="fix-card">
+              <strong>Safe Local Action</strong>
+              <p>${escapeHtml(safeLocalAction)}</p>
+            </article>
+          ` : ""}
+          ${manualValues.length ? `
+            <article class="fix-card">
+              <strong>Manual Values Needed</strong>
+              <p>${escapeHtml(manualValues.join(" • "))}</p>
+            </article>
+          ` : ""}
+        `;
+        repairStatus.textContent = `Retry ${latest.retry_number || 0}/${latest.retry_limit || 0}. Result: ${latest.result || "unknown"}.`;
       }
 
       function renderMeta(snapshot) {
@@ -827,13 +1507,14 @@
         const snapshot = await response.json();
         const state = String(snapshot.current_state || "idle");
 
-        currentState.textContent = state;
+        connectionStatus.textContent = "Connected";
         stateChip.textContent = state;
         stateChip.className = `status-chip status-${state}`;
 
-        renderDeployments(snapshot.deployments);
+        renderDeployments(snapshot.deployments, snapshot.tracked_deployment_count);
+        renderActiveDeployment(snapshot.deployments);
         renderTimeline(snapshot.history);
-        renderFixes(snapshot.issues, snapshot.suggestions);
+        renderFixes(snapshot.issues, snapshot.suggestions, snapshot.suggested_fix_count);
         renderMeta(snapshot);
       }
 
@@ -889,11 +1570,67 @@
         );
       }
 
+      function setServiceConfigFields(serviceName, values) {
+        const fields = serviceConfigFields[serviceName];
+        if (!fields) return;
+        for (const [key, id] of Object.entries(fields)) {
+          const value = values[key] == null ? "" : String(values[key]);
+          document.getElementById(id).value = value;
+        }
+      }
+
+      function getServiceConfigFields(serviceName) {
+        const fields = serviceConfigFields[serviceName];
+        if (!fields) return {};
+        return Object.fromEntries(
+          Object.entries(fields).map(([key, id]) => [key, document.getElementById(id).value.trim()])
+        );
+      }
+
+      function syncServiceConfigToLambda(serviceName) {
+        const values = getServiceConfigFields(serviceName);
+        const merged = {
+          ...lambdaProfiles[serviceName],
+          ...values,
+        };
+        document.getElementById("lambda_docker_image").value = merged.docker_image || "";
+        document.getElementById("lambda_model_id").value = merged.model_id || "";
+        document.getElementById("lambda_service_port").value = merged.service_port || "";
+        document.getElementById("lambda_health_path").value = merged.health_path || "/health";
+      }
+
+      function applyProfileToServiceFields(profile) {
+        if (!profile) return;
+        const serviceName = profile.preset === "ltx-worker-lambda" || String(profile.service || "").toLowerCase().includes("ltx")
+          ? "ltx"
+          : profile.preset === "image-server-v13" || String(profile.service || "").toLowerCase().includes("image")
+            ? "flux"
+            : "";
+        if (!serviceName) return;
+        setServiceConfigFields(serviceName, {
+          docker_image: profile.docker_image || lambdaProfiles[serviceName].docker_image,
+          model_id: profile.model_id || lambdaProfiles[serviceName].model_id,
+          service_port: String(profile.port || lambdaProfiles[serviceName].service_port),
+          health_path: profile.health_path || lambdaProfiles[serviceName].health_path,
+        });
+      }
+
+      function applyLambdaProfile(profileName) {
+        const profile = lambdaProfiles[profileName];
+        if (!profile) return;
+        setServiceConfigFields(profileName, profile);
+        syncServiceConfigToLambda(profileName);
+        lambdaSaveStatus.textContent = `${profileName === "ltx" ? "LTX" : "Flux"} service settings loaded. Save before launching.`;
+      }
+
       function renderLambdaConfig(payload) {
         const config = payload.config || {};
         for (const [key, id] of lambdaFields) {
           document.getElementById(id).value = config[key] || "";
         }
+        setServiceConfigFields("flux", lambdaProfiles.flux);
+        setServiceConfigFields("ltx", lambdaProfiles.ltx);
+        lambdaAvailabilityRegion.value = config.region || "";
         document.getElementById("lambda_api_key").placeholder = payload.has_api_key
           ? "Stored locally. Enter a new value only to replace it."
           : "";
@@ -929,6 +1666,345 @@
         lambdaSaveStatus.textContent = "Saved locally. Launch will use these Lambda settings.";
       }
 
+      function formatLambdaOption(option) {
+        const price = option.price_cents_per_hour == null
+          ? "price unknown"
+          : `$${(Number(option.price_cents_per_hour) / 100).toFixed(2)}/hr`;
+        const gpuMemory = option.gpu_memory_gb == null ? "GPU memory unknown" : `${option.gpu_memory_gb} GB GPU`;
+        const gpuCount = option.gpu_count ? `${option.gpu_count}x` : "";
+        return `${option.instance_type_name} · ${gpuCount} ${option.gpu_description || "GPU"} · ${gpuMemory} · ${price}`;
+      }
+
+      function formatDetailValue(value, suffix = "") {
+        if (value == null || value === "") return "unknown";
+        return `${value}${suffix}`;
+      }
+
+      function renderLambdaOptionDetails(option) {
+        const price = option.price_cents_per_hour == null
+          ? "unknown"
+          : `$${(Number(option.price_cents_per_hour) / 100).toFixed(2)}/hr`;
+        const raw = option.raw ? JSON.stringify(option.raw, null, 2) : "{}";
+        const details = [
+          ["Instance type", option.instance_type_name],
+          ["Region", option.region_name],
+          ["GPU", `${formatDetailValue(option.gpu_count)}x ${option.gpu_description || "GPU"}`],
+          ["GPU memory", formatDetailValue(option.gpu_memory_gb, " GB")],
+          ["vCPUs", formatDetailValue(option.vcpu_count)],
+          ["RAM", formatDetailValue(option.memory_gb, " GB")],
+          ["Storage", formatDetailValue(option.storage_gb, " GB")],
+          ["Price", price],
+          ["Available", option.available ? "yes" : "no"],
+          ["Reason", option.availability_reason || "unknown"],
+        ];
+        return `
+          <details class="availability-details">
+            <summary>More detail</summary>
+            <div class="availability-detail-grid">
+              ${details.map(([label, value]) => `
+                <div class="availability-detail-item">
+                  <span>${escapeHtml(label)}</span>
+                  <strong>${escapeHtml(value)}</strong>
+                </div>
+              `).join("")}
+            </div>
+            <pre class="availability-raw">${escapeHtml(raw)}</pre>
+          </details>
+        `;
+      }
+
+      function renderLambdaAvailability(payload) {
+        const options = payload.options || [];
+        const selected = payload.selected_option || {};
+        const recommended = payload.recommended_option || {};
+        lambdaAvailabilityRegion.value = payload.region || lambdaAvailabilityRegion.value || "";
+
+        lambdaGpuOption.innerHTML = options.length
+          ? options.map((option) => {
+              const value = `${option.instance_type_name}|${option.region_name || ""}`;
+              const label = `${option.available ? "" : "[Unavailable] "}${formatLambdaOption(option)}`;
+              const isSelected = selected.instance_type_name === option.instance_type_name
+                && (!selected.region_name || selected.region_name === option.region_name);
+              return `<option value="${escapeHtml(value)}"${isSelected ? " selected" : ""}>${escapeHtml(label)}</option>`;
+            }).join("")
+          : '<option value="">No options loaded</option>';
+
+        if (!lambdaGpuOption.value && recommended.instance_type_name) {
+          lambdaGpuOption.value = `${recommended.instance_type_name}|${recommended.region_name || ""}`;
+        }
+
+        const checked = payload.checked_at ? `Checked ${friendlyDate(payload.checked_at)}.` : "Not checked yet.";
+        const selectedText = selected.instance_type_name ? ` Selected ${selected.instance_type_name}.` : "";
+        lambdaAvailabilityStatus.textContent = payload.error
+          ? `${checked} ${payload.error}`
+          : `${checked}${selectedText} Lambda capacity is a live signal, so launch can still fall back if capacity changes.`;
+
+        lambdaAvailabilityList.innerHTML = options.length
+          ? options.slice(0, 6).map((option) => {
+              const recommendedClass = recommended.instance_type_name === option.instance_type_name ? " is-recommended" : "";
+              const unavailableClass = option.available ? "" : " is-unavailable";
+              const compactClass = option.available ? "" : " is-compact";
+              const reason = option.availability_reason || "";
+              if (!option.available) {
+                return `
+                  <article class="availability-card${unavailableClass}${compactClass}">
+                    <div class="availability-compact-row">
+                      <strong>${escapeHtml(formatLambdaOption(option))}</strong>
+                      <div class="availability-meta">${escapeHtml(option.region_name || "region unknown")} · ${escapeHtml(reason)}</div>
+                    </div>
+                    ${renderLambdaOptionDetails(option)}
+                  </article>
+                `;
+              }
+              return `
+                <article class="availability-card${recommendedClass}${unavailableClass}${compactClass}">
+                  <strong>${escapeHtml(formatLambdaOption(option))}</strong>
+                  <div class="availability-meta">
+                    ${escapeHtml(option.region_name || "region unknown")} · ${escapeHtml(reason)}
+                    ${recommendedClass ? " · Recommended" : ""}
+                  </div>
+                  ${renderLambdaOptionDetails(option)}
+                </article>
+              `;
+            }).join("")
+          : '<div class="empty">No Lambda GPU options loaded yet.</div>';
+      }
+
+      async function loadLambdaAvailability() {
+        const response = await fetch("/api/lambda-availability");
+        const payload = await response.json();
+        renderLambdaAvailability(payload);
+      }
+
+      async function loadRepairState() {
+        const response = await fetch("/api/repairs");
+        const payload = await response.json();
+        renderRepairState(payload);
+      }
+
+      async function clearRepairState() {
+        const response = await fetch("/api/repairs/clear", { method: "POST" });
+        const payload = await response.json();
+        renderRepairState(payload);
+        repairStatus.textContent = "Repair state cleared.";
+      }
+
+      async function analyzeRepairState() {
+        repairStatus.textContent = "Analyzing recent deploy logs...";
+        const response = await fetch("/api/repairs/analyze", { method: "POST" });
+        const payload = await response.json();
+        renderRepairState(payload);
+      }
+
+      async function retryAfterManualFix() {
+        repairStatus.textContent = "Retrying image-server-v13 after manual fix...";
+        const response = await fetch("/api/repairs/retry", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ preset: "image-server-v13" }),
+        });
+        const payload = await response.json();
+        repairStatus.textContent = payload.ok === false
+          ? `Retry not started. ${payload.preset || "Another deployment"} may already be running.`
+          : `Retry started. PID ${payload.pid}.`;
+        await Promise.all([loadOverview(), loadLogs(), loadRepairState()]);
+      }
+
+      async function refreshLambdaAvailability() {
+        lambdaAvailabilityStatus.textContent = "Refreshing Lambda availability...";
+        if (lambdaAvailabilityRegion.value.trim()) {
+          document.getElementById("lambda_region").value = lambdaAvailabilityRegion.value.trim();
+          await saveLambdaConfig();
+        }
+        const response = await fetch("/api/lambda-availability/refresh", { method: "POST" });
+        const payload = await response.json();
+        renderLambdaAvailability(payload);
+      }
+
+      async function selectLambdaGpuOption() {
+        const value = lambdaGpuOption.value || "";
+        const [instanceType, region] = value.split("|");
+        if (!instanceType) {
+          lambdaAvailabilityStatus.textContent = "Choose a Lambda GPU option first.";
+          return;
+        }
+        const response = await fetch("/api/lambda-availability/select", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            instance_type_name: instanceType,
+            region_name: region || lambdaAvailabilityRegion.value.trim(),
+          }),
+        });
+        const payload = await response.json();
+        renderLambdaAvailability(payload);
+        await loadLambdaConfig();
+        lambdaAvailabilityStatus.textContent = `Selected ${instanceType} for the next Lambda launch.`;
+      }
+
+      function renderPreviewConfig(payload) {
+        latestPreviewConfig = payload;
+        serviceProfiles = payload.profiles || serviceProfiles || [];
+        serviceProfiles.forEach(applyProfileToServiceFields);
+        previewProfile.innerHTML = serviceProfiles.length
+          ? serviceProfiles.map((profile) => `
+              <option value="${escapeHtml(profile.id)}"${payload.selected_profile_id === profile.id ? " selected" : ""}>
+                ${escapeHtml(profile.service || profile.name || profile.id)} · ${escapeHtml(profile.model_id || profile.docker_image || profile.id)}
+              </option>
+            `).join("")
+          : '<option value="">Current Lambda config</option>';
+        const resolutions = payload.resolutions || [];
+        previewResolution.innerHTML = resolutions.map((item) => {
+          const value = `${item.width}x${item.height}`;
+          return `<option value="${escapeHtml(value)}">${escapeHtml(item.label)} · ${escapeHtml(value)}</option>`;
+        }).join("");
+        const detected = payload.detected_inference || "image";
+        previewInference.value = "auto";
+        applyPreviewQualityMode(detected, previewQuality.value || "balanced");
+        previewStatus.textContent = `Detected ${detected} inference from ${payload.model_id || payload.docker_image || "current Lambda config"}.`;
+      }
+
+      function activePreviewInference(profile) {
+        const requested = previewInference.value;
+        if (requested === "image" || requested === "video") return requested;
+        if (profile?.inference) return profile.inference;
+        return latestPreviewConfig?.detected_inference || "image";
+      }
+
+      function applyPreviewQualityMode(inference = null, mode = null) {
+        const selectedMode = mode || previewQuality.value || "balanced";
+        if (selectedMode === "manual") return;
+        const profile = serviceProfiles.find((item) => item.id === previewProfile.value);
+        const resolvedInference = inference || activePreviewInference(profile);
+        const settings = previewQualityModes[selectedMode]?.[resolvedInference] || previewQualityModes.balanced[resolvedInference];
+        if (!settings) return;
+        previewResolution.value = settings.resolution;
+        previewSeconds.value = settings.seconds;
+        previewSteps.value = settings.steps;
+        previewGuidance.value = settings.guidance;
+        previewFps.value = settings.fps;
+      }
+
+      function applyPreviewProfile() {
+        const profile = serviceProfiles.find((item) => item.id === previewProfile.value);
+        if (!profile) return;
+        document.getElementById("lambda_docker_image").value = profile.docker_image || "";
+        document.getElementById("lambda_model_id").value = profile.model_id || "";
+        document.getElementById("lambda_service_port").value = String(profile.port || "");
+        document.getElementById("lambda_health_path").value = profile.health_path || "/health";
+        applyProfileToServiceFields(profile);
+        previewInference.value = "auto";
+        applyPreviewQualityMode(profile.inference || "image", previewQuality.value || "balanced");
+        previewStatus.textContent = `Using ${profile.service || profile.id} from preset ${profile.preset || profile.id}.`;
+      }
+
+      async function loadPreviewConfig() {
+        const response = await fetch("/api/inference-preview/config");
+        const payload = await response.json();
+        renderPreviewConfig(payload);
+      }
+
+      function getPreviewPayload() {
+        const [width, height] = (previewResolution.value || "768x768").split("x").map((value) => Number(value));
+        const mode = previewQuality.value || "balanced";
+        const profile = serviceProfiles.find((item) => item.id === previewProfile.value);
+        const inference = activePreviewInference(profile);
+        const modeSettings = mode === "manual" ? null : previewQualityModes[mode]?.[inference];
+        const fps = Number(previewFps.value || 24);
+        const seconds = Number(previewSeconds.value || 2);
+        return {
+          prompt: previewPrompt.value.trim(),
+          profile_id: previewProfile.value,
+          inference: previewInference.value,
+          model_id: document.getElementById("lambda_model_id").value.trim(),
+          docker_image: document.getElementById("lambda_docker_image").value.trim(),
+          quality_mode: mode,
+          width,
+          height,
+          duration_seconds: seconds,
+          num_frames: modeSettings?.frames || Math.max(1, Math.round(seconds * fps)),
+          num_inference_steps: Number(previewSteps.value || 8),
+          guidance_scale: Number(previewGuidance.value || 3.5),
+          fps,
+        };
+      }
+
+      async function generatePreview() {
+        const payload = getPreviewPayload();
+        if (!payload.prompt) {
+          previewStatus.textContent = "Enter a prompt before generating.";
+          return;
+        }
+        const modeText = payload.inference === "auto"
+          ? `auto/${latestPreviewConfig?.detected_inference || "detected"}`
+          : payload.inference;
+        previewStatus.textContent = `Generating ${modeText} preview at ${payload.width}x${payload.height}. This can take several minutes.`;
+        previewOutput.innerHTML = "";
+        const response = await fetch("/api/inference-preview/generate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+        const result = await response.json();
+        if (!result.ok) {
+          previewStatus.textContent = `Preview failed: ${result.error || "unknown error"}`;
+          return;
+        }
+        previewStatus.textContent = `Saved ${result.inference} preview to ${result.path}.`;
+        const meta = result.history_item || {};
+        const metaText = [
+          `${result.width}x${result.height}`,
+          meta.seconds ? `${meta.seconds}s` : "",
+          meta.fps ? `${meta.fps}fps` : "",
+          result.render_seconds ? `rendered in ${result.render_seconds}s` : "",
+        ].filter(Boolean).join(" · ");
+        previewOutput.innerHTML = result.inference === "video"
+          ? `<div class="preview-history-item"><div class="preview-history-title">${escapeHtml(meta.name || "Video Preview")}</div><div class="preview-history-meta">${escapeHtml(metaText)}</div><video src="${escapeHtml(result.url)}" controls playsinline></video></div>`
+          : `<div class="preview-history-item"><div class="preview-history-title">${escapeHtml(meta.name || "Image Preview")}</div><div class="preview-history-meta">${escapeHtml(metaText)}</div><img src="${escapeHtml(result.url)}" alt="Generated preview" /></div>`;
+        await loadPreviewHistory();
+      }
+
+      function renderPreviewHistory(payload) {
+        const items = payload.items || [];
+        previewHistory.innerHTML = items.length
+          ? `
+            <div class="meta-label">Preview History</div>
+            ${items.map((item) => {
+              const media = item.inference === "video"
+                ? `<video src="${escapeHtml(item.url)}" controls playsinline></video>`
+                : `<img src="${escapeHtml(item.url)}" alt="${escapeHtml(item.name || "Preview")}" />`;
+              const details = [
+                `${item.width || "?"}x${item.height || "?"}`,
+                item.seconds ? `${item.seconds}s` : "",
+                item.fps ? `${item.fps}fps` : "",
+                item.render_seconds ? `rendered in ${item.render_seconds}s` : "",
+                item.created_at ? friendlyDate(item.created_at) : "",
+              ].filter(Boolean).join(" · ");
+              return `
+                <article class="preview-history-item">
+                  <div class="preview-history-title">${escapeHtml(item.name || "Preview")}</div>
+                  <div class="preview-history-meta">${escapeHtml(details)}</div>
+                  <div class="preview-history-meta">${escapeHtml(item.path || "")}</div>
+                  ${media}
+                </article>
+              `;
+            }).join("")}
+          `
+          : '<div class="empty">No preview history yet.</div>';
+      }
+
+      async function loadPreviewHistory() {
+        const response = await fetch("/api/inference-preview/history");
+        const payload = await response.json();
+        renderPreviewHistory(payload);
+      }
+
       async function copyTextBlock(text) {
         await navigator.clipboard.writeText(text);
       }
@@ -948,6 +2024,8 @@
       }
 
       async function launchFluxDeploy() {
+        syncServiceConfigToLambda("flux");
+        await saveLambdaConfig();
         fluxDeployStatus.textContent = "Starting Flux Lambda deployment...";
         const response = await fetch("/api/preset-deploy", {
           method: "POST",
@@ -968,14 +2046,160 @@
         await Promise.all([loadOverview(), loadLogs()]);
       }
 
+      function renderFluxHealth(payload) {
+        const latest = payload.latest || payload.after || payload;
+        const target = latest.target || payload.target || {};
+        const url = latest.url || (target.ip ? `http://${target.ip}:${target.port || 8080}${target.health_path || "/health"}` : "unknown endpoint");
+        if (latest.healthy) {
+          fluxHealthStatus.textContent = `Healthy: ${url}${latest.latency_ms != null ? ` in ${latest.latency_ms}ms` : ""}.`;
+          return;
+        }
+        if (latest.remote_healthy && latest.diagnosis === "lambda_firewall_ingress_blocked") {
+          fluxHealthStatus.textContent = `Service is healthy inside Lambda, but public port 8080 is blocked. Open Lambda firewall TCP/8080 or tunnel with: ${latest.ssh_tunnel_command}`;
+          return;
+        }
+        const error = latest.error || "Health check failed.";
+        fluxHealthStatus.textContent = `Down: ${url}. ${error}`;
+      }
+
+      async function loadFluxHealth() {
+        const response = await fetch("/api/lambda-health");
+        const payload = await response.json();
+        renderFluxHealth(payload);
+      }
+
+      async function checkFluxHealth() {
+        fluxHealthStatus.textContent = "Checking image-server-v13 health...";
+        const response = await fetch("/api/lambda-health/check", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ preset: "image-server-v13" }),
+        });
+        const payload = await response.json();
+        renderFluxHealth(payload);
+        await Promise.all([loadOverview(), loadRepairState()]);
+      }
+
+      async function healFluxHealth() {
+        fluxHealthStatus.textContent = "Running Lambda self-heal: SSH diagnostics, container restart, and health recheck...";
+        const response = await fetch("/api/lambda-health/heal", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ preset: "image-server-v13" }),
+        });
+        const payload = await response.json();
+        renderFluxHealth(payload);
+        await Promise.all([loadOverview(), loadLogs(), loadRepairState()]);
+      }
+
+      function renderLambdaInstanceStatus(payload) {
+        latestLambdaInstanceStatus = payload;
+        const latest = payload.latest || payload;
+        const target = latest.target || payload.target || {};
+        if (!target.instance_id && !latest.target?.instance_id) {
+          cancelInstanceStatus.textContent = "No active Lambda instance recorded.";
+          cancelActiveInstance.disabled = true;
+          cleanupStaleInstance.disabled = true;
+          return;
+        }
+        if (latest.ok) {
+          const status = latest.status || latest.instance?.status || "unknown";
+          if (["terminated", "terminating", "deleted", "destroyed"].includes(String(status).toLowerCase())) {
+            cancelInstanceStatus.textContent = `Lambda cloud status: ${status}. No running cloud instance remains for this deployment.`;
+            cancelActiveInstance.disabled = true;
+            cleanupStaleInstance.disabled = false;
+            return;
+          }
+          cancelInstanceStatus.textContent = `Lambda cloud status: ${status}. Cancel remains available even if HTTP health is down.`;
+          cancelActiveInstance.disabled = false;
+          cleanupStaleInstance.disabled = true;
+          return;
+        }
+        if (latest.error) {
+          cancelInstanceStatus.textContent = `Lambda status poll failed: ${latest.error}`;
+          cancelActiveInstance.disabled = false;
+          cleanupStaleInstance.disabled = false;
+        }
+      }
+
+      async function loadLambdaInstanceStatus() {
+        const response = await fetch("/api/lambda-instance/status");
+        const payload = await response.json();
+        renderLambdaInstanceStatus(payload);
+      }
+
+      async function pollLambdaInstanceStatus() {
+        const response = await fetch("/api/lambda-instance/poll", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ preset: "image-server-v13" }),
+        });
+        const payload = await response.json();
+        renderLambdaInstanceStatus(payload);
+        await loadOverview();
+      }
+
+      async function cancelLambdaInstance() {
+        const confirmed = window.confirm(
+          "Cancel and delete the active Lambda image-server-v13 instance now? This stops the GPU instance and is intended to prevent ongoing billing."
+        );
+        if (!confirmed) return;
+
+        cancelActiveInstance.disabled = true;
+        cancelInstanceStatus.textContent = "Cancelling Lambda instance through the Lambda API...";
+        const response = await fetch("/api/lambda-instance/cancel", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ preset: "image-server-v13" }),
+        });
+        const payload = await response.json();
+        if (!payload.ok) {
+          cancelInstanceStatus.textContent = `Cancel failed: ${payload.error || "unknown error"}`;
+          cancelActiveInstance.disabled = false;
+          return;
+        }
+        cancelInstanceStatus.textContent = `Deleted ${payload.target?.instance_id || "Lambda instance"}. Local deployment state cleared.`;
+        await Promise.all([loadOverview(), loadLogs(), loadFluxHealth(), loadLambdaInstanceStatus()]);
+      }
+
+      async function cleanupStaleLambdaInstance() {
+        cleanupStaleInstance.disabled = true;
+        cancelInstanceStatus.textContent = "Checking Lambda cloud state before clearing the local deployment record...";
+        const response = await fetch("/api/lambda-instance/cleanup-stale", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ preset: "image-server-v13" }),
+        });
+        const payload = await response.json();
+        if (!payload.ok) {
+          cancelInstanceStatus.textContent = `Cleanup blocked: ${payload.error || "Lambda may still report the instance as running."}`;
+          cleanupStaleInstance.disabled = false;
+          return;
+        }
+        cancelInstanceStatus.textContent = payload.message || "Stale local deployment record cleared.";
+        await Promise.all([loadOverview(), loadLogs(), loadFluxHealth(), loadLambdaInstanceStatus()]);
+      }
+
       async function launchLtxDeploy() {
+        syncServiceConfigToLambda("ltx");
+        await saveLambdaConfig();
         ltxDeployStatus.textContent = "Starting LTX worker deployment...";
         const response = await fetch("/api/preset-deploy", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ preset: "ltx-worker-nebius-dev" }),
+          body: JSON.stringify({ preset: "ltx-worker-lambda" }),
         });
         const payload = await response.json();
         if (!response.ok || payload.ok === false) {
@@ -1004,7 +2228,8 @@
 
       async function refreshAll() {
         try {
-          await Promise.all([loadOverview(), loadLogs(), loadLambdaConfig()]);
+          await Promise.all([loadOverview(), loadLogs(), loadLambdaConfig(), loadLambdaAvailability(), loadRepairState(), loadFluxHealth(), loadLambdaInstanceStatus(), loadPreviewConfig(), loadPreviewHistory()]);
+          await pollTopInstanceHealth();
         } catch (error) {
           logBlock.textContent = `Dashboard refresh failed: ${error}`;
         }
@@ -1014,7 +2239,21 @@
       document.getElementById("refresh-history").addEventListener("click", loadOverview);
       document.getElementById("refresh-logs").addEventListener("click", loadLogs);
       document.getElementById("clear-logs").addEventListener("click", clearLogs);
+      document.getElementById("refresh-preview-config").addEventListener("click", loadPreviewConfig);
+      document.getElementById("generate-preview").addEventListener("click", generatePreview);
+      previewProfile.addEventListener("change", applyPreviewProfile);
+      previewQuality.addEventListener("change", () => applyPreviewQualityMode());
+      previewInference.addEventListener("change", () => applyPreviewQualityMode());
+      document.getElementById("refresh-lambda-availability").addEventListener("click", refreshLambdaAvailability);
+      document.getElementById("select-lambda-gpu").addEventListener("click", selectLambdaGpuOption);
+      document.getElementById("analyze-repairs").addEventListener("click", analyzeRepairState);
+      document.getElementById("clear-repairs").addEventListener("click", clearRepairState);
+      document.getElementById("retry-after-manual-fix").addEventListener("click", retryAfterManualFix);
       document.getElementById("launch-flux-deploy").addEventListener("click", launchFluxDeploy);
+      document.getElementById("check-flux-health").addEventListener("click", checkFluxHealth);
+      document.getElementById("heal-flux-health").addEventListener("click", healFluxHealth);
+      document.getElementById("cancel-active-instance").addEventListener("click", cancelLambdaInstance);
+      document.getElementById("cleanup-stale-instance").addEventListener("click", cleanupStaleLambdaInstance);
       document.getElementById("copy-flux-command").addEventListener("click", async () => {
         await copyTextBlock(fluxDeployCommand);
         fluxDeployStatus.textContent = "Copied Flux deploy command.";
@@ -1045,8 +2284,11 @@
         lambdaSaveStatus.textContent = "Copied Lambda export block.";
       });
 
+      setupCollapsiblePanels();
       refreshAll();
       setInterval(loadOverview, 15000);
+      setInterval(pollLambdaInstanceStatus, 30000);
+      setInterval(pollTopInstanceHealth, 600000);
       setInterval(loadLogs, 20000);
     </script>
   </body>

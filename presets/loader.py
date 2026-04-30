@@ -37,6 +37,9 @@ class Preset:
     deployment_mode: str | None = None
     environment: str | None = None
     disk_size_gb: int | None = None
+    registry_url: str | None = None
+    registry_username: str | None = None
+    registry_password_env: str | None = None
 
     @classmethod
     def from_dict(cls, name: str, data: Dict) -> "Preset":
@@ -56,6 +59,9 @@ class Preset:
         docker_image = data.get("docker_image", data.get("image", ""))
         port_value = data.get("port", data.get("service_port", 8080))
         health_path = data.get("health_path", "/health")
+        registry = data.get("registry") or {}
+        if not isinstance(registry, dict):
+            raise PresetValidationError("registry must be a mapping when provided")
 
         return cls(
             name=name,
@@ -74,6 +80,9 @@ class Preset:
             deployment_mode=str(data["deployment_mode"]) if data.get("deployment_mode") is not None else None,
             environment=str(data["environment"]) if data.get("environment") is not None else None,
             disk_size_gb=int(data["disk_size_gb"]) if data.get("disk_size_gb") is not None else None,
+            registry_url=str(registry["url"]) if registry.get("url") is not None else None,
+            registry_username=str(registry["username"]) if registry.get("username") is not None else None,
+            registry_password_env=str(registry["password_env"]) if registry.get("password_env") is not None else None,
         )
 
 

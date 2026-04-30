@@ -1,0 +1,48 @@
+# Lambda GPU preset scaffold for a future LTX 2.3 worker.
+#
+# This intentionally does not replace `ltx-worker-lambda`. LTX 2.3 currently
+# needs a different runtime/code path from the simple Diffusers LTX worker.
+
+name: ltx-2.3-worker-lambda
+
+provider: lambda
+service: ltx-2.3-worker
+deployment_mode: vm
+environment: experimental
+
+# Start with A100/H100 class GPUs for LTX 2.3 evaluation. A10 remains useful
+# for the existing `ltx-worker-lambda` proof path, but is not a good default
+# for the 22B LTX 2.3 family.
+instance_type: gpu_1x_a100_sxm4
+region: us-east-1
+
+docker_image: ghcr.io/intelligensi-ai/ltx-2.3-worker:experimental
+
+port: 8000
+health_path: /health
+disk_size_gb: 500
+
+lambda_api_key: ${LAMBDALABS_API_KEY}
+
+ssh_key_name: intelligensi-lambda
+ssh_private_key_path: ~/.ssh/intelligensi_lambda
+ssh_username: ubuntu
+
+registry:
+  url: ghcr.io
+  username: intelligensi-ai
+  password_env: GHCR_TOKEN
+
+env:
+  HF_HUB_ENABLE_HF_TRANSFER: "0"
+  LTX_MODEL_ID: "Lightricks/LTX-2.3"
+  LTX_MODEL_VARIANT: "ltx-2.3-22b-distilled"
+  LTX_ENGINE: "ltx-2.3"
+  LTX_BACKEND: "ltx2"
+  OUTPUT_DIR: "/app/outputs"
+  MAX_WIDTH: "3840"
+  MAX_HEIGHT: "2160"
+  MAX_FRAMES: "100000"
+  MAX_INFERENCE_STEPS: "12"
+  LTX_DTYPE: "bfloat16"
+  HF_TOKEN: ${HF_TOKEN}

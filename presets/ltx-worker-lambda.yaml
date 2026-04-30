@@ -1,0 +1,45 @@
+# Lambda GPU preset for the LTX video worker.
+#
+# This is intentionally separate from ltx-worker-nebius-dev so the Lambda path
+# can evolve independently from the Nebius VM bootstrap flow.
+
+name: ltx-worker-lambda
+
+provider: lambda
+service: ltx-worker
+deployment_mode: vm
+environment: dev
+
+instance_type: gpu_1x_a10
+region: us-east-1
+
+docker_image: ghcr.io/intelligensi-ai/ltx-worker:latest
+
+port: 8000
+health_path: /health
+disk_size_gb: 200
+
+lambda_api_key: ${LAMBDALABS_API_KEY}
+
+ssh_key_name: intelligensi-lambda
+ssh_private_key_path: ~/.ssh/intelligensi_lambda
+ssh_username: ubuntu
+
+# Container registry auth (GitHub Container Registry)
+registry:
+  url: ghcr.io
+  username: intelligensi-ai
+  password_env: GHCR_TOKEN
+
+env:
+  HF_HUB_ENABLE_HF_TRANSFER: "0"
+  LTX_MODEL_ID: ${LTX_MODEL_ID}
+  LTX_ENGINE: "ltx-video"
+  OUTPUT_DIR: "/app/outputs"
+  LOW_VRAM: "1"
+  MAX_WIDTH: "3840"
+  MAX_HEIGHT: "2160"
+  MAX_FRAMES: "100000"
+  MAX_INFERENCE_STEPS: "12"
+  LTX_DTYPE: "auto"
+  HF_TOKEN: ${HF_TOKEN}

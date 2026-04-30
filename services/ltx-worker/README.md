@@ -51,14 +51,14 @@ curl -Method POST http://localhost:8000/ `
 | `LTX_ENGINE` | `ltx-video` | Engine label returned by health/status |
 | `OUTPUT_DIR` | `/app/outputs` | Video output directory |
 | `LOW_VRAM` | `1` | Enables CPU offload when CUDA is available |
-| `MAX_WIDTH` | `256` | Maximum request width |
-| `MAX_HEIGHT` | `256` | Maximum request height |
-| `MAX_FRAMES` | `17` | Maximum request frame count |
-| `MAX_INFERENCE_STEPS` | `4` | Maximum inference steps |
+| `MAX_WIDTH` | `3840` | Maximum request width |
+| `MAX_HEIGHT` | `2160` | Maximum request height |
+| `MAX_FRAMES` | `100000` | Maximum request frame count |
+| `MAX_INFERENCE_STEPS` | `12` | Maximum inference steps |
 | `LTX_DTYPE` | `auto` | `auto`, `float32`, `float16`, or `bfloat16` |
+| `HF_HUB_ENABLE_HF_TRANSFER` | `0` | Optional Hugging Face fast transfer; requires `hf_transfer` in the image |
 | `HF_TOKEN` | unset | Hugging Face token, if required by model access |
 
 ## Notes
 
 Do not commit model weights, Hugging Face caches, output videos, or Docker image archives. Keep those mounted, downloaded at runtime, or pre-warmed on the GPU host.
-

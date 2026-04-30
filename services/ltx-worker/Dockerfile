@@ -13,6 +13,7 @@ RUN pip install \
     diffusers==0.33.1 \
     transformers==4.49.0 \
     accelerate==1.1.1 \
+    hf_transfer \
     safetensors \
     imageio \
     imageio-ffmpeg \

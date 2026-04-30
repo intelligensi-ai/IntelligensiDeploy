@@ -43,5 +43,13 @@
     "preset": "image-server-v9",
     "instance_id": "af815ab3239243339069d7ac3ca24ce0",
     "ip": "129.213.93.85"
+  },
+  "ltx-worker-lambda": {
+    "preset": "ltx-worker-lambda",
+    "instance_id": "b4d3a682cc944860b19f08f228c9ea59",
+    "ip": "193.122.153.79",
+    "port": 8000,
+    "health_path": "/health",
+    "service": "ltx-worker"
   }
 }
