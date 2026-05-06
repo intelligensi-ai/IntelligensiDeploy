@@ -1,11 +1,11 @@
-FROM pytorch/pytorch:2.1.0-cuda11.8-cudnn8-runtime
+FROM pytorch/pytorch:2.7.0-cuda12.8-cudnn9-runtime
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV TZ=Etc/UTC
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y --no-install-recommends git ffmpeg tzdata \
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl git ffmpeg tzdata \
     && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --upgrade pip
@@ -17,6 +17,7 @@ RUN pip install \
     safetensors \
     imageio \
     imageio-ffmpeg \
+    pillow \
     sentencepiece \
     protobuf
 

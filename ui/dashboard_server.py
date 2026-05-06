@@ -699,7 +699,7 @@ def check_lambda_health(preset: str = "image-server-v13", timeout: int = 8) -> D
         return _write_lambda_health(payload)
 
 
-def _ssh_lambda(target: Dict[str, Any], command: str, timeout: int = 40) -> Dict[str, Any]:
+def _ssh_lambda(target: Dict[str, Any], command: str, timeout: int = 40, input_text: Optional[str] = None) -> Dict[str, Any]:
     key_path = target.get("ssh_private_key_path", "")
     if not key_path:
         return {"ok": False, "returncode": 255, "stdout": "", "stderr": "Missing SSH private key path."}
@@ -717,7 +717,7 @@ def _ssh_lambda(target: Dict[str, Any], command: str, timeout: int = 40) -> Dict
         command,
     ]
     try:
-        process = subprocess.run(ssh_cmd, capture_output=True, text=True, timeout=timeout)
+        process = subprocess.run(ssh_cmd, capture_output=True, text=True, timeout=timeout, input=input_text)
         return {
             "ok": process.returncode == 0,
             "returncode": process.returncode,
@@ -1064,6 +1064,44 @@ def _record_preview_history(item: Dict[str, Any]) -> None:
     _write_json(PREVIEW_HISTORY_PATH, payload)
 
 
+def delete_preview_history_item(item_id: str) -> Dict[str, Any]:
+    item_id = item_id.strip()
+    if not item_id:
+        raise ValueError("Preview id is required.")
+
+    payload = _safe_json(PREVIEW_HISTORY_PATH, {"version": 1, "items": []})
+    if not isinstance(payload, dict):
+        payload = {"version": 1, "items": []}
+    items = payload.get("items")
+    if not isinstance(items, list):
+        items = []
+        payload["items"] = items
+
+    matched = next((item for item in items if isinstance(item, dict) and str(item.get("id") or "") == item_id), None)
+    if matched is None:
+        raise FileNotFoundError("Preview history item was not found.")
+    if matched.get("inference") != "video":
+        raise ValueError("Only generated video previews can be deleted here.")
+
+    deleted_file = False
+    relative_path = str(matched.get("path") or "").strip()
+    if relative_path:
+        media_path = (ROOT / relative_path).resolve()
+        video_dir = PREVIEW_VIDEO_DIR.resolve()
+        if not media_path.is_relative_to(video_dir):
+            raise ValueError("Preview path is outside the generated video directory.")
+        if media_path.exists():
+            media_path.unlink()
+            deleted_file = True
+
+    payload["items"] = [
+        item for item in items
+        if not (isinstance(item, dict) and str(item.get("id") or "") == item_id)
+    ]
+    _write_json(PREVIEW_HISTORY_PATH, payload)
+    return {"ok": True, "id": item_id, "deleted_file": deleted_file, "path": relative_path}
+
+
 def _int_from_payload(payload: Dict[str, Any], key: str, default: int) -> int:
     try:
         return int(payload.get(key, default))
@@ -1109,17 +1147,17 @@ def _request_json_via_lambda(target: Dict[str, Any], path: str, payload: Dict[st
     code = (
         "import json,sys,urllib.request,urllib.error;"
         "url=sys.argv[1];"
-        "payload=sys.argv[2].encode();"
+        "payload=sys.stdin.read().encode();"
         "req=urllib.request.Request(url,data=payload,headers={'Content-Type':'application/json'},method='POST');"
         "\ntry:\n"
-        " print(urllib.request.urlopen(req,timeout=int(sys.argv[3])).read().decode())\n"
+        " print(urllib.request.urlopen(req,timeout=int(sys.argv[2])).read().decode())\n"
         "except urllib.error.HTTPError as e:\n"
         " body=e.read().decode(errors='ignore')\n"
         " print(body or json.dumps({'error': str(e)}))\n"
         " sys.exit(2)\n"
     )
-    command = f"python3 -c {shlex.quote(code)} {shlex.quote(url)} {shlex.quote(json.dumps(payload))} {int(timeout)}"
-    result = _ssh_lambda(target, command, timeout=timeout + 20)
+    command = f"python3 -c {shlex.quote(code)} {shlex.quote(url)} {int(timeout)}"
+    result = _ssh_lambda(target, command, timeout=timeout + 20, input_text=json.dumps(payload))
     stdout = result.get("stdout") or "{}"
     if not result.get("ok"):
         try:
@@ -1224,6 +1262,7 @@ def _run_preview_video(
     steps: int,
     guidance: float,
     fps: int,
+    seed_frame_base64: str = "",
     target: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     if width > 3840 or height > 2160:
@@ -1239,6 +1278,8 @@ def _run_preview_video(
         "guidance_scale": guidance,
         "fps": fps,
     }
+    if seed_frame_base64:
+        request_payload["seed_frame_base64"] = seed_frame_base64
     job = _request_json_via_lambda(target, "/", request_payload, timeout=60) if target else _request_json(
         "http://127.0.0.1:8000/",
         request_payload,
@@ -1268,6 +1309,7 @@ def _run_preview_video(
                 "frames": frames,
                 "seconds": round(frames / fps, 2) if fps else None,
                 "steps": steps,
+                "seed_frame": bool(seed_frame_base64),
             }
         if status == "error":
             raise RuntimeError(str(latest.get("error") or "LTX job failed."))
@@ -1312,7 +1354,10 @@ def run_inference_preview(payload: Dict[str, Any]) -> Dict[str, Any]:
             guidance = float(payload.get("guidance_scale", 3.5))
         except (TypeError, ValueError):
             guidance = 3.5
-        result = _run_preview_video(prompt, width, height, frames, steps, guidance, fps, preview_target)
+        seed_frame_base64 = str(payload.get("seed_frame_base64") or "").strip()
+        if len(seed_frame_base64) > 12_000_000:
+            raise ValueError("Seed frame payload is too large. Use an image under 8 MB.")
+        result = _run_preview_video(prompt, width, height, frames, steps, guidance, fps, seed_frame_base64, preview_target)
 
     render_seconds = round(time.time() - started, 2)
     history_item = {
@@ -1331,6 +1376,7 @@ def run_inference_preview(payload: Dict[str, Any]) -> Dict[str, Any]:
         "seconds": result.get("seconds"),
         "fps": fps,
         "steps": result.get("steps"),
+        "seed_frame": bool(result.get("seed_frame")),
         "render_seconds": render_seconds,
         "path": result.get("path"),
         "url": result.get("url"),
@@ -1827,6 +1873,15 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             body = self._read_json_body()
             try:
                 self._send_json(run_inference_preview(body if isinstance(body, dict) else {}))
+            except Exception as exc:
+                self._send_json({"ok": False, "error": str(exc)})
+            return
+
+        if parsed.path == "/api/inference-preview/delete":
+            body = self._read_json_body()
+            try:
+                preview_id = str(body.get("id") or "") if isinstance(body, dict) else ""
+                self._send_json(delete_preview_history_item(preview_id))
             except Exception as exc:
                 self._send_json({"ok": False, "error": str(exc)})
             return

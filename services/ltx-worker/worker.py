@@ -1,7 +1,9 @@
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import urlparse
+import base64
 import gc
+import io
 import json
 import os
 import threading
@@ -12,6 +14,12 @@ import uuid
 import torch
 from diffusers import LTXPipeline
 from diffusers.utils import export_to_video
+from PIL import Image
+
+try:
+    from diffusers import LTXImageToVideoPipeline
+except ImportError:
+    LTXImageToVideoPipeline = None
 
 
 MODEL_ID = os.getenv("LTX_MODEL_ID", "Lightricks/LTX-Video")
@@ -28,6 +36,7 @@ MAX_FRAMES = int(os.getenv("MAX_FRAMES", "17"))
 MAX_INFERENCE_STEPS = int(os.getenv("MAX_INFERENCE_STEPS", "4"))
 
 pipe = None
+image_pipe = None
 pipe_lock = threading.Lock()
 generation_lock = threading.Lock()
 jobs = {}
@@ -74,32 +83,59 @@ def select_dtype():
     return torch.float32
 
 
-def load_ltx():
-    global pipe
+def _prepare_pipe(loaded_pipe, device):
+    if device == "cuda" and LOW_VRAM:
+        loaded_pipe.enable_model_cpu_offload()
+    else:
+        loaded_pipe.to(device)
+
+    if hasattr(loaded_pipe.vae, "enable_tiling"):
+        loaded_pipe.vae.enable_tiling()
+    if hasattr(loaded_pipe, "enable_attention_slicing"):
+        loaded_pipe.enable_attention_slicing()
+    return loaded_pipe
+
+
+def load_ltx(image_to_video=False):
+    global pipe, image_pipe
 
     with pipe_lock:
-        if pipe is not None:
+        if image_to_video:
+            if LTXImageToVideoPipeline is None:
+                raise RuntimeError("This worker image does not include LTXImageToVideoPipeline. Rebuild with a Diffusers version that supports LTX image-to-video.")
+            if image_pipe is not None:
+                return image_pipe
+        elif pipe is not None:
             return pipe
 
         dtype = select_dtype()
         device = "cuda" if torch.cuda.is_available() else "cpu"
-        print(f"Loading {MODEL_ID} on {device} with {dtype}...", flush=True)
+        pipeline_class = LTXImageToVideoPipeline if image_to_video else LTXPipeline
+        print(f"Loading {MODEL_ID} {pipeline_class.__name__} on {device} with {dtype}...", flush=True)
 
-        loaded_pipe = LTXPipeline.from_pretrained(MODEL_ID, torch_dtype=dtype)
+        loaded_pipe = pipeline_class.from_pretrained(MODEL_ID, torch_dtype=dtype)
+        loaded_pipe = _prepare_pipe(loaded_pipe, device)
 
-        if device == "cuda" and LOW_VRAM:
-            loaded_pipe.enable_model_cpu_offload()
+        if image_to_video:
+            image_pipe = loaded_pipe
         else:
-            loaded_pipe.to(device)
+            pipe = loaded_pipe
 
-        if hasattr(loaded_pipe.vae, "enable_tiling"):
-            loaded_pipe.vae.enable_tiling()
-        if hasattr(loaded_pipe, "enable_attention_slicing"):
-            loaded_pipe.enable_attention_slicing()
-
-        pipe = loaded_pipe
         print("LTX model loaded.", flush=True)
-        return pipe
+        return image_pipe if image_to_video else pipe
+
+
+def decode_seed_frame(seed_frame_base64, width, height):
+    if not seed_frame_base64:
+        return None
+    raw = str(seed_frame_base64).strip()
+    if "," in raw and raw.lower().startswith("data:"):
+        raw = raw.split(",", 1)[1]
+    image_bytes = base64.b64decode(raw, validate=True)
+    image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    if image.size != (width, height):
+        image = image.resize((width, height), Image.Resampling.LANCZOS)
+    return image
 
 
 def update_job(job_id, **updates):
@@ -111,7 +147,8 @@ def run_generation(job_id, request):
     try:
         with generation_lock:
             update_job(job_id, status="loading_model")
-            pipeline = load_ltx()
+            seed_frame = decode_seed_frame(request.get("seed_frame_base64"), request["width"], request["height"])
+            pipeline = load_ltx(image_to_video=seed_frame is not None)
             generator = None
             seed = request["seed"]
             if seed is not None:
@@ -123,18 +160,22 @@ def run_generation(job_id, request):
             update_job(job_id, status="generating", started_at=started)
             print(f"Generating video for prompt: {request['prompt']}", flush=True)
 
-            result = pipeline(
-                prompt=request["prompt"],
-                negative_prompt=request["negative_prompt"],
-                width=request["width"],
-                height=request["height"],
-                num_frames=request["num_frames"],
-                num_inference_steps=request["steps"],
-                guidance_scale=request["guidance_scale"],
-                decode_timestep=0.05,
-                decode_noise_scale=0.025,
-                generator=generator,
-            )
+            pipeline_kwargs = {
+                "prompt": request["prompt"],
+                "negative_prompt": request["negative_prompt"],
+                "width": request["width"],
+                "height": request["height"],
+                "num_frames": request["num_frames"],
+                "num_inference_steps": request["steps"],
+                "guidance_scale": request["guidance_scale"],
+                "decode_timestep": 0.05,
+                "decode_noise_scale": 0.025,
+                "generator": generator,
+            }
+            if seed_frame is not None:
+                pipeline_kwargs["image"] = seed_frame
+
+            result = pipeline(**pipeline_kwargs)
 
             filename = f"{job_id}.mp4"
             output_path = OUTPUT_DIR / filename
@@ -180,6 +221,8 @@ class Handler(BaseHTTPRequestHandler):
                 "engine": ENGINE,
                 "model_id": MODEL_ID,
                 "model_loaded": pipe is not None,
+                "image_to_video_supported": LTXImageToVideoPipeline is not None,
+                "image_model_loaded": image_pipe is not None,
                 "cuda_available": torch.cuda.is_available(),
                 "low_vram": LOW_VRAM,
             },
@@ -204,6 +247,7 @@ class Handler(BaseHTTPRequestHandler):
             guidance_scale = get_float(data, "guidance_scale", float(os.getenv("GUIDANCE_SCALE", "3.0")), 0.0, 20.0)
             fps = get_int(data, "fps", int(os.getenv("FPS", "24")), 1, 60)
             seed = data.get("seed")
+            seed_frame_base64 = data.get("seed_frame_base64") or data.get("seed_image_base64") or data.get("image_base64")
 
             if width % 32 != 0 or height % 32 != 0:
                 raise ValueError("width and height must be divisible by 32")
@@ -219,6 +263,7 @@ class Handler(BaseHTTPRequestHandler):
                 "guidance_scale": guidance_scale,
                 "fps": fps,
                 "seed": seed,
+                "seed_frame_base64": seed_frame_base64,
             }
             job = {
                 "id": job_id,
@@ -233,6 +278,7 @@ class Handler(BaseHTTPRequestHandler):
                     "guidance_scale": guidance_scale,
                     "fps": fps,
                     "seed": seed,
+                    "seed_frame": bool(seed_frame_base64),
                 },
             }
             with jobs_lock:

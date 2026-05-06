@@ -444,6 +444,18 @@ def _bootstrap_remote(preset: Preset, state: DeploymentState) -> None:
     )
     _ssh(state.ip, key_path, preset.ssh_username, run_cmd)
 
+    if "ltx" in service_name.lower():
+        cuda_check = (
+            f"sudo docker exec {shlex.quote(service_name)} python -c "
+            + shlex.quote(
+                "import torch,sys; "
+                "ok=torch.cuda.is_available(); "
+                "print(f'cuda_available={ok} device_count={torch.cuda.device_count()}'); "
+                "sys.exit(0 if ok else 42)"
+            )
+        )
+        _ssh(state.ip, key_path, preset.ssh_username, cuda_check)
+
 
 def deploy_preset(name: str) -> DeploymentState:
     preset = _get_preset(name)

@@ -670,7 +670,22 @@
         background: #041019;
       }
 
+      .seed-frame-preview {
+        margin-top: 8px;
+        display: none;
+      }
+
+      .seed-frame-preview img {
+        width: 100%;
+        max-height: 180px;
+        object-fit: contain;
+        border-radius: 12px;
+        border: 1px solid rgba(139, 194, 214, 0.14);
+        background: #041019;
+      }
+
       .preview-history-item {
+        position: relative;
         padding: 12px 14px;
         border-radius: 14px;
         border: 1px solid rgba(139, 194, 214, 0.14);
@@ -679,7 +694,25 @@
         gap: 8px;
       }
 
+      .preview-delete {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        border-radius: 999px;
+        display: grid;
+        place-items: center;
+        background: rgba(255, 125, 125, 0.12);
+        color: #ffd1d1;
+        border-color: rgba(255, 125, 125, 0.3);
+        font-size: 18px;
+        line-height: 1;
+      }
+
       .preview-history-title {
+        padding-right: 36px;
         font-weight: 800;
       }
 
@@ -940,6 +973,12 @@
                   <label for="preview_fps">FPS</label>
                   <input id="preview_fps" type="number" value="24" min="1" max="60" />
                 </div>
+                <div class="field full" id="seed-frame-field" style="display:none">
+                  <label for="preview_seed_frame">Seed Frame</label>
+                  <input id="preview_seed_frame" type="file" accept="image/png,image/jpeg,image/webp" />
+                  <div class="inline-note">Optional for LTX video. The frame is resized to the selected preview resolution before generation.</div>
+                  <div class="seed-frame-preview" id="seed-frame-preview"></div>
+                </div>
               </div>
               <div class="inline-note" id="preview-status">Detect the active model, then generate a local preview.</div>
               <div class="preview-output" id="preview-output"></div>
@@ -1136,6 +1175,9 @@
       const previewSteps = document.getElementById("preview_steps");
       const previewGuidance = document.getElementById("preview_guidance");
       const previewFps = document.getElementById("preview_fps");
+      const previewSeedFrame = document.getElementById("preview_seed_frame");
+      const seedFrameField = document.getElementById("seed-frame-field");
+      const seedFramePreview = document.getElementById("seed-frame-preview");
       const previewStatus = document.getElementById("preview-status");
       const previewOutput = document.getElementById("preview-output");
       const previewHistory = document.getElementById("preview-history");
@@ -1875,18 +1917,30 @@
         return latestPreviewConfig?.detected_inference || "image";
       }
 
+      function updateSeedFrameVisibility() {
+        const profile = serviceProfiles.find((item) => item.id === previewProfile.value);
+        seedFrameField.style.display = activePreviewInference(profile) === "video" ? "" : "none";
+      }
+
       function applyPreviewQualityMode(inference = null, mode = null) {
         const selectedMode = mode || previewQuality.value || "balanced";
-        if (selectedMode === "manual") return;
+        if (selectedMode === "manual") {
+          updateSeedFrameVisibility();
+          return;
+        }
         const profile = serviceProfiles.find((item) => item.id === previewProfile.value);
         const resolvedInference = inference || activePreviewInference(profile);
         const settings = previewQualityModes[selectedMode]?.[resolvedInference] || previewQualityModes.balanced[resolvedInference];
-        if (!settings) return;
+        if (!settings) {
+          updateSeedFrameVisibility();
+          return;
+        }
         previewResolution.value = settings.resolution;
         previewSeconds.value = settings.seconds;
         previewSteps.value = settings.steps;
         previewGuidance.value = settings.guidance;
         previewFps.value = settings.fps;
+        updateSeedFrameVisibility();
       }
 
       function applyPreviewProfile() {
@@ -1908,7 +1962,24 @@
         renderPreviewConfig(payload);
       }
 
-      function getPreviewPayload() {
+      function readSeedFrameDataUrl() {
+        const file = previewSeedFrame.files && previewSeedFrame.files[0];
+        if (!file) return Promise.resolve(null);
+        if (!file.type.startsWith("image/")) {
+          return Promise.reject(new Error("Seed frame must be an image file."));
+        }
+        if (file.size > 8 * 1024 * 1024) {
+          return Promise.reject(new Error("Seed frame must be 8 MB or smaller."));
+        }
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || ""));
+          reader.onerror = () => reject(new Error("Could not read the seed frame file."));
+          reader.readAsDataURL(file);
+        });
+      }
+
+      async function getPreviewPayload() {
         const [width, height] = (previewResolution.value || "768x768").split("x").map((value) => Number(value));
         const mode = previewQuality.value || "balanced";
         const profile = serviceProfiles.find((item) => item.id === previewProfile.value);
@@ -1916,6 +1987,7 @@
         const modeSettings = mode === "manual" ? null : previewQualityModes[mode]?.[inference];
         const fps = Number(previewFps.value || 24);
         const seconds = Number(previewSeconds.value || 2);
+        const seedFrameDataUrl = inference === "video" ? await readSeedFrameDataUrl() : null;
         return {
           prompt: previewPrompt.value.trim(),
           profile_id: previewProfile.value,
@@ -1930,11 +2002,18 @@
           num_inference_steps: Number(previewSteps.value || 8),
           guidance_scale: Number(previewGuidance.value || 3.5),
           fps,
+          seed_frame_base64: seedFrameDataUrl,
         };
       }
 
       async function generatePreview() {
-        const payload = getPreviewPayload();
+        let payload;
+        try {
+          payload = await getPreviewPayload();
+        } catch (error) {
+          previewStatus.textContent = error.message;
+          return;
+        }
         if (!payload.prompt) {
           previewStatus.textContent = "Enter a prompt before generating.";
           return;
@@ -1962,10 +2041,11 @@
           `${result.width}x${result.height}`,
           meta.seconds ? `${meta.seconds}s` : "",
           meta.fps ? `${meta.fps}fps` : "",
+          meta.seed_frame ? "seed frame" : "",
           result.render_seconds ? `rendered in ${result.render_seconds}s` : "",
         ].filter(Boolean).join(" · ");
         previewOutput.innerHTML = result.inference === "video"
-          ? `<div class="preview-history-item"><div class="preview-history-title">${escapeHtml(meta.name || "Video Preview")}</div><div class="preview-history-meta">${escapeHtml(metaText)}</div><video src="${escapeHtml(result.url)}" controls playsinline></video></div>`
+          ? `<div class="preview-history-item" data-preview-id="${escapeHtml(meta.id || "")}"><button class="preview-delete" data-preview-id="${escapeHtml(meta.id || "")}" title="Delete video preview" aria-label="Delete video preview">x</button><div class="preview-history-title">${escapeHtml(meta.name || "Video Preview")}</div><div class="preview-history-meta">${escapeHtml(metaText)}</div><video src="${escapeHtml(result.url)}" controls playsinline></video></div>`
           : `<div class="preview-history-item"><div class="preview-history-title">${escapeHtml(meta.name || "Image Preview")}</div><div class="preview-history-meta">${escapeHtml(metaText)}</div><img src="${escapeHtml(result.url)}" alt="Generated preview" /></div>`;
         await loadPreviewHistory();
       }
@@ -1976,6 +2056,9 @@
           ? `
             <div class="meta-label">Preview History</div>
             ${items.map((item) => {
+              const deleteButton = item.inference === "video"
+                ? `<button class="preview-delete" data-preview-id="${escapeHtml(item.id || "")}" title="Delete video preview" aria-label="Delete video preview">x</button>`
+                : "";
               const media = item.inference === "video"
                 ? `<video src="${escapeHtml(item.url)}" controls playsinline></video>`
                 : `<img src="${escapeHtml(item.url)}" alt="${escapeHtml(item.name || "Preview")}" />`;
@@ -1987,7 +2070,8 @@
                 item.created_at ? friendlyDate(item.created_at) : "",
               ].filter(Boolean).join(" · ");
               return `
-                <article class="preview-history-item">
+                <article class="preview-history-item" data-preview-id="${escapeHtml(item.id || "")}">
+                  ${deleteButton}
                   <div class="preview-history-title">${escapeHtml(item.name || "Preview")}</div>
                   <div class="preview-history-meta">${escapeHtml(details)}</div>
                   <div class="preview-history-meta">${escapeHtml(item.path || "")}</div>
@@ -2003,6 +2087,30 @@
         const response = await fetch("/api/inference-preview/history");
         const payload = await response.json();
         renderPreviewHistory(payload);
+      }
+
+      async function deleteVideoPreview(previewId) {
+        if (!previewId) return;
+        const confirmed = window.confirm("Are you sure you want to delete this generated video preview?");
+        if (!confirmed) return;
+        previewStatus.textContent = "Deleting video preview...";
+        const response = await fetch("/api/inference-preview/delete", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ id: previewId }),
+        });
+        const payload = await response.json();
+        if (!response.ok || !payload.ok) {
+          previewStatus.textContent = `Delete failed: ${payload.error || "unknown error"}`;
+          return;
+        }
+        previewStatus.textContent = "Deleted video preview.";
+        const activeItem = [...previewOutput.querySelectorAll("[data-preview-id]")]
+          .find((item) => item.dataset.previewId === previewId);
+        if (activeItem) previewOutput.innerHTML = "";
+        await loadPreviewHistory();
       }
 
       async function copyTextBlock(text) {
@@ -2133,12 +2241,13 @@
       }
 
       async function pollLambdaInstanceStatus() {
+        const preset = activeLambdaPreset || "image-server-v13";
         const response = await fetch("/api/lambda-instance/poll", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ preset: "image-server-v13" }),
+          body: JSON.stringify({ preset }),
         });
         const payload = await response.json();
         renderLambdaInstanceStatus(payload);
@@ -2146,19 +2255,20 @@
       }
 
       async function cancelLambdaInstance() {
+        const preset = activeLambdaPreset || "image-server-v13";
         const confirmed = window.confirm(
-          "Cancel and delete the active Lambda image-server-v13 instance now? This stops the GPU instance and is intended to prevent ongoing billing."
+          `Cancel and delete the active Lambda ${preset} instance now? This stops the GPU instance and is intended to prevent ongoing billing.`
         );
         if (!confirmed) return;
 
         cancelActiveInstance.disabled = true;
-        cancelInstanceStatus.textContent = "Cancelling Lambda instance through the Lambda API...";
+        cancelInstanceStatus.textContent = `Cancelling ${preset} through the Lambda API...`;
         const response = await fetch("/api/lambda-instance/cancel", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ preset: "image-server-v13" }),
+          body: JSON.stringify({ preset }),
         });
         const payload = await response.json();
         if (!payload.ok) {
@@ -2171,14 +2281,15 @@
       }
 
       async function cleanupStaleLambdaInstance() {
+        const preset = activeLambdaPreset || "image-server-v13";
         cleanupStaleInstance.disabled = true;
-        cancelInstanceStatus.textContent = "Checking Lambda cloud state before clearing the local deployment record...";
+        cancelInstanceStatus.textContent = `Checking ${preset} cloud state before clearing the local deployment record...`;
         const response = await fetch("/api/lambda-instance/cleanup-stale", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ preset: "image-server-v13" }),
+          body: JSON.stringify({ preset }),
         });
         const payload = await response.json();
         if (!payload.ok) {
@@ -2219,6 +2330,7 @@
         logBlock.textContent = (payload.lines || []).length
           ? payload.lines.join("\n")
           : "No deploy.log file found yet. Run a deployment through the stateful workflow to populate logs.";
+        logBlock.scrollTop = logBlock.scrollHeight;
       }
 
       async function clearLogs() {
@@ -2244,6 +2356,33 @@
       previewProfile.addEventListener("change", applyPreviewProfile);
       previewQuality.addEventListener("change", () => applyPreviewQualityMode());
       previewInference.addEventListener("change", () => applyPreviewQualityMode());
+      previewSeedFrame.addEventListener("change", async () => {
+        const file = previewSeedFrame.files && previewSeedFrame.files[0];
+        if (!file) {
+          seedFramePreview.style.display = "none";
+          seedFramePreview.innerHTML = "";
+          return;
+        }
+        try {
+          const dataUrl = await readSeedFrameDataUrl();
+          seedFramePreview.style.display = "block";
+          seedFramePreview.innerHTML = `<img src="${escapeHtml(dataUrl)}" alt="Selected seed frame" />`;
+        } catch (error) {
+          seedFramePreview.style.display = "none";
+          seedFramePreview.innerHTML = "";
+          previewStatus.textContent = error.message;
+        }
+      });
+      previewOutput.addEventListener("click", (event) => {
+        const button = event.target instanceof HTMLElement ? event.target.closest(".preview-delete") : null;
+        if (!(button instanceof HTMLElement)) return;
+        deleteVideoPreview(button.dataset.previewId || "");
+      });
+      previewHistory.addEventListener("click", (event) => {
+        const button = event.target instanceof HTMLElement ? event.target.closest(".preview-delete") : null;
+        if (!(button instanceof HTMLElement)) return;
+        deleteVideoPreview(button.dataset.previewId || "");
+      });
       document.getElementById("refresh-lambda-availability").addEventListener("click", refreshLambdaAvailability);
       document.getElementById("select-lambda-gpu").addEventListener("click", selectLambdaGpuOption);
       document.getElementById("analyze-repairs").addEventListener("click", analyzeRepairState);
