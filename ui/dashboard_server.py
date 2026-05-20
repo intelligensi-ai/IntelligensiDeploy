@@ -44,6 +44,120 @@ PREVIEW_VIDEO_DIR = UI_DIR / "videos"
 PREVIEW_HISTORY_PATH = ROOT / ".intelligensi_preview_history.json"
 ACTIVE_DEPLOY: Dict[str, Any] = {"process": None, "preset": None}
 ACTIVE_DEPLOY_LOCK = threading.Lock()
+HF_MODEL_DISCOVERY_LIMIT = 10
+HF_MODEL_DISCOVERY_URL = (
+    "https://huggingface.co/api/models"
+    "?pipeline_tag={task}&sort=downloads&direction=-1&limit={limit}&full=false"
+)
+HF_DISCOVERY_TASKS = [
+    ("text-generation", "text"),
+    ("text-to-image", "image"),
+    ("image-to-video", "video"),
+    ("text-to-video", "video"),
+    ("feature-extraction", "embedding"),
+]
+CURATED_MODELS = [
+    {
+        "id": "black-forest-labs/FLUX.1-schnell",
+        "name": "FLUX.1 Schnell",
+        "provider": "Hugging Face",
+        "task": "text-to-image",
+        "suitability": "image",
+        "downloads": None,
+        "likes": None,
+        "source": "fallback",
+    },
+    {
+        "id": "Lightricks/LTX-Video",
+        "name": "LTX Video",
+        "provider": "Hugging Face",
+        "task": "text-to-video",
+        "suitability": "video",
+        "downloads": None,
+        "likes": None,
+        "source": "fallback",
+    },
+    {
+        "id": "Lightricks/LTX-2.3",
+        "name": "LTX 2.3",
+        "provider": "Hugging Face",
+        "task": "text-to-video",
+        "suitability": "video",
+        "downloads": None,
+        "likes": None,
+        "source": "fallback",
+    },
+    {
+        "id": "Qwen/Qwen2.5-7B-Instruct",
+        "name": "Qwen2.5 7B Instruct",
+        "provider": "Hugging Face",
+        "task": "text-generation",
+        "suitability": "text",
+        "downloads": None,
+        "likes": None,
+        "source": "fallback",
+    },
+    {
+        "id": "meta-llama/Llama-3.1-8B-Instruct",
+        "name": "Llama 3.1 8B Instruct",
+        "provider": "Hugging Face",
+        "task": "text-generation",
+        "suitability": "text",
+        "downloads": None,
+        "likes": None,
+        "source": "fallback",
+    },
+    {
+        "id": "BAAI/bge-large-en-v1.5",
+        "name": "BGE Large EN v1.5",
+        "provider": "Hugging Face",
+        "task": "feature-extraction",
+        "suitability": "embedding",
+        "downloads": None,
+        "likes": None,
+        "source": "fallback",
+    },
+    {
+        "id": "sentence-transformers/all-MiniLM-L6-v2",
+        "name": "All MiniLM L6 v2",
+        "provider": "Hugging Face",
+        "task": "sentence-similarity",
+        "suitability": "embedding",
+        "downloads": None,
+        "likes": None,
+        "source": "fallback",
+    },
+    {
+        "id": "stabilityai/stable-diffusion-xl-base-1.0",
+        "name": "Stable Diffusion XL Base",
+        "provider": "Hugging Face",
+        "task": "text-to-image",
+        "suitability": "image",
+        "downloads": None,
+        "likes": None,
+        "source": "fallback",
+    },
+    {
+        "id": "mistralai/Mistral-7B-Instruct-v0.3",
+        "name": "Mistral 7B Instruct",
+        "provider": "Hugging Face",
+        "task": "text-generation",
+        "suitability": "text",
+        "downloads": None,
+        "likes": None,
+        "source": "fallback",
+    },
+    {
+        "id": "openai/whisper-large-v3",
+        "name": "Whisper Large v3",
+        "provider": "Hugging Face",
+        "task": "automatic-speech-recognition",
+        "suitability": "audio",
+        "downloads": None,
+        "likes": None,
+        "source": "fallback",
+    },
+]
 
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
@@ -98,6 +212,12 @@ def _preset_names() -> set[str]:
     return {preset["name"] for preset in _load_presets()}
 
 
+def _append_ui_log(message: str) -> None:
+    LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with LOG_PATH.open("a", encoding="utf-8") as log_handle:
+        log_handle.write(f"[UI] {message}\n")
+
+
 def _start_preset_deploy(preset: str) -> Dict[str, Any]:
     preset_path = PRESET_DIR / f"{preset}.yaml"
     if not preset_path.exists():
@@ -110,19 +230,41 @@ def _start_preset_deploy(preset: str) -> Dict[str, Any]:
     with ACTIVE_DEPLOY_LOCK:
         process = ACTIVE_DEPLOY.get("process")
         if process is not None and process.poll() is None:
+            _append_ui_log(
+                f"Launch blocked for {preset}: deployment already running for {ACTIVE_DEPLOY.get('preset')} with PID {process.pid}."
+            )
             return {
                 "ok": False,
                 "already_running": True,
                 "preset": ACTIVE_DEPLOY.get("preset"),
                 "pid": process.pid,
+                "error": "Another deployment is already running.",
             }
 
         LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
         log_handle = LOG_PATH.open("a", encoding="utf-8")
-        log_handle.write(f"\n[UI] Starting deployment for preset {preset}\n")
+        lambda_config = load_lambda_config()
+        runtime = _preset_runtime_profile(preset)
+        model_id = str(runtime.get("model_id") or lambda_config.get("model_id", "")).strip()
+
+        log_handle.write(f"\n[UI] Launch requested for preset {preset} at {_utc_now()}\n")
+        log_handle.write(f"[UI] Command: {shlex.join(command)}\n")
+        log_handle.write(
+            "[UI] Preflight: "
+            f"lambda_api_key={'present' if lambda_config.get('api_key') else 'missing'}, "
+            f"ghcr_token={'present' if lambda_config.get('ghcr_token') else 'missing'}, "
+            f"hf_token={'present' if lambda_config.get('hf_token') else 'missing'}, "
+            f"region={lambda_config.get('region') or 'unset'}, "
+            f"instance_type={lambda_config.get('instance_type') or runtime.get('instance_type') or 'preset/default'}, "
+            f"model_id={model_id or 'unset'}\n"
+        )
+        if preset.endswith("-lambda") and not lambda_config.get("api_key"):
+            error = "Missing Lambda API key. Save Lambda Config before launching."
+            log_handle.write(f"[UI] Launch blocked: {error}\n")
+            log_handle.close()
+            return {"ok": False, "preset": preset, "error": error, "log_path": str(LOG_PATH.relative_to(ROOT))}
         log_handle.flush()
 
-        lambda_config = load_lambda_config()
         env = os.environ.copy()
         env["PYTHONUNBUFFERED"] = "1"
         lambda_env_map = {
@@ -136,24 +278,60 @@ def _start_preset_deploy(preset: str) -> Dict[str, Any]:
             value = lambda_config.get(config_key, "").strip()
             if value:
                 env[env_key] = value
-        runtime = _preset_runtime_profile(preset)
-        model_id = str(runtime.get("model_id") or lambda_config.get("model_id", "")).strip()
         if model_id:
             if preset in {"ltx-worker-lambda", "ltx-2.3-worker-lambda"}:
                 env["LTX_MODEL_ID"] = model_id
             else:
                 env["MODEL_ID"] = model_id
-        process = subprocess.Popen(
-            command,
-            cwd=str(ROOT),
-            stdout=log_handle,
-            stderr=subprocess.STDOUT,
-            stdin=subprocess.DEVNULL,
-            env=env,
-        )
+        try:
+            process = subprocess.Popen(
+                command,
+                cwd=str(ROOT),
+                stdout=log_handle,
+                stderr=subprocess.STDOUT,
+                stdin=subprocess.DEVNULL,
+                env=env,
+            )
+        except OSError as exc:
+            log_handle.write(f"[UI] Launch failed before process start: {exc}\n")
+            log_handle.close()
+            return {"ok": False, "preset": preset, "error": str(exc), "log_path": str(LOG_PATH.relative_to(ROOT))}
+        log_handle.write(f"[UI] Deployment process started with PID {process.pid}. Streaming output below.\n")
+        log_handle.flush()
         ACTIVE_DEPLOY["process"] = process
         ACTIVE_DEPLOY["preset"] = preset
-        return {"ok": True, "preset": preset, "pid": process.pid}
+        return {
+            "ok": True,
+            "preset": preset,
+            "pid": process.pid,
+            "command": shlex.join(command),
+            "log_path": str(LOG_PATH.relative_to(ROOT)),
+        }
+
+
+def deploy_status_response() -> Dict[str, Any]:
+    process = ACTIVE_DEPLOY.get("process")
+    preset = ACTIVE_DEPLOY.get("preset")
+    if process is None:
+        return {
+            "ok": True,
+            "active": False,
+            "preset": None,
+            "pid": None,
+            "returncode": None,
+            "log_path": str(LOG_PATH.relative_to(ROOT)) if LOG_PATH.exists() else None,
+            "log_lines": _tail_lines(LOG_PATH, 80),
+        }
+    returncode = process.poll()
+    return {
+        "ok": True,
+        "active": returncode is None,
+        "preset": preset,
+        "pid": process.pid,
+        "returncode": returncode,
+        "log_path": str(LOG_PATH.relative_to(ROOT)) if LOG_PATH.exists() else None,
+        "log_lines": _tail_lines(LOG_PATH, 80),
+    }
 
 
 def _empty_lambda_config() -> Dict[str, str]:
@@ -180,11 +358,11 @@ def load_lambda_config() -> Dict[str, str]:
 
     if isinstance(public_data, dict):
         for key, value in public_data.items():
-            if key in config and value is not None:
+            if key in config and value is not None and str(value).strip():
                 config[key] = str(value)
     if isinstance(secret_data, dict):
         for key, value in secret_data.items():
-            if key in config and value is not None:
+            if key in config and value is not None and str(value).strip():
                 config[key] = str(value)
     return config
 
@@ -206,7 +384,7 @@ def save_lambda_config(payload: Dict[str, Any]) -> Dict[str, str]:
         if key not in allowed_keys:
             continue
         incoming = str(value).strip()
-        if key in {"api_key", "ghcr_token", "hf_token"} and incoming == "":
+        if incoming == "":
             continue
         updated[key] = incoming
 
@@ -960,6 +1138,11 @@ def service_profiles_response() -> Dict[str, Any]:
                 "model_id": model_id,
                 "port": preset.port,
                 "health_path": preset.health_path,
+                "instance_type": preset.instance_type,
+                "region": preset.region,
+                "disk_size_gb": preset.disk_size_gb,
+                "deployment_mode": preset.deployment_mode,
+                "environment": preset.environment,
                 "inference": _detect_preview_inference(model_id, preset.docker_image),
             }
         )
@@ -973,6 +1156,110 @@ def service_profiles_response() -> Dict[str, Any]:
         seen.add(key)
         unique_profiles.append(profile)
     return {"ok": True, "profiles": unique_profiles}
+
+
+def _model_name(model_id: str) -> str:
+    if not model_id:
+        return "Unknown model"
+    return model_id.rsplit("/", 1)[-1].replace("-", " ").replace("_", " ").strip() or model_id
+
+
+def _normalise_hf_model(item: Dict[str, Any], suitability: str) -> Dict[str, Any]:
+    model_id = str(item.get("modelId") or item.get("id") or "").strip()
+    task = str(item.get("pipeline_tag") or item.get("pipelineTag") or "").strip()
+    return {
+        "id": model_id,
+        "name": _model_name(model_id),
+        "provider": "Hugging Face",
+        "task": task or "inference",
+        "suitability": suitability,
+        "downloads": item.get("downloads"),
+        "likes": item.get("likes"),
+        "source": "huggingface",
+    }
+
+
+def _deployed_model_ids() -> set[str]:
+    deployed: set[str] = set()
+    snapshot = build_snapshot(log_limit=20)
+    for item in snapshot.deployments.values():
+        if not isinstance(item, dict):
+            continue
+        for key in ("model_id", "modelId"):
+            value = str(item.get(key) or "").strip()
+            if value:
+                deployed.add(value)
+        metadata = item.get("metadata")
+        if isinstance(metadata, dict):
+            value = str(metadata.get("model") or metadata.get("model_id") or "").strip()
+            if value:
+                deployed.add(value)
+    for profile in service_profiles_response().get("profiles", []):
+        if isinstance(profile, dict):
+            value = str(profile.get("model_id") or "").strip()
+            if value:
+                deployed.add(value)
+    return deployed
+
+
+def discover_models() -> Dict[str, Any]:
+    config = load_lambda_config()
+    token = config.get("hf_token", "").strip() or os.getenv("HF_TOKEN", "").strip()
+    headers = {"User-Agent": "IntelligensiDeployDashboard/0.1"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+
+    discovered: List[Dict[str, Any]] = []
+    errors: List[str] = []
+    per_task_limit = max(3, HF_MODEL_DISCOVERY_LIMIT // 2)
+    for task, suitability in HF_DISCOVERY_TASKS:
+        url = HF_MODEL_DISCOVERY_URL.format(task=task, limit=per_task_limit)
+        try:
+            req = request.Request(url, headers=headers)
+            with request.urlopen(req, timeout=8) as response:
+                data = json.loads(response.read().decode("utf-8"))
+            if isinstance(data, list):
+                discovered.extend(
+                    _normalise_hf_model(item, suitability)
+                    for item in data
+                    if isinstance(item, dict)
+                )
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"{task}: {exc}")
+
+    by_id: Dict[str, Dict[str, Any]] = {}
+    for model in discovered:
+        model_id = str(model.get("id") or "")
+        if not model_id or model_id in by_id:
+            continue
+        by_id[model_id] = model
+
+    source = "huggingface"
+    models = list(by_id.values())
+    if not models:
+        source = "fallback"
+        models = [dict(item) for item in CURATED_MODELS]
+
+    deployed = _deployed_model_ids()
+    for model in models:
+        model["deployment_status"] = "deployed" if model.get("id") in deployed else "available"
+
+    models.sort(
+        key=lambda item: (
+            1 if item.get("deployment_status") == "deployed" else 0,
+            int(item.get("downloads") or 0),
+            int(item.get("likes") or 0),
+        ),
+        reverse=True,
+    )
+    return {
+        "ok": source == "huggingface",
+        "source": source,
+        "fallback": source == "fallback",
+        "has_token": bool(token),
+        "errors": errors[:5],
+        "models": models[:HF_MODEL_DISCOVERY_LIMIT],
+    }
 
 
 def _profile_by_id(profile_id: str) -> Optional[Dict[str, Any]]:
@@ -1666,6 +1953,12 @@ class DashboardHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, directory=str(UI_DIR), **kwargs)
 
+    def end_headers(self) -> None:
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
+        super().end_headers()
+
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
         if parsed.path == "/api/overview":
@@ -1725,6 +2018,10 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             self._send_json(service_profiles_response())
             return
 
+        if parsed.path == "/api/model-discovery":
+            self._send_json(discover_models())
+            return
+
         if parsed.path == "/api/inference-preview/history":
             self._send_json(preview_history_response())
             return
@@ -1738,6 +2035,10 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                 limit = 200
             payload = {"lines": _tail_lines(LOG_PATH, limit), "path": str(LOG_PATH.relative_to(ROOT)) if LOG_PATH.exists() else None}
             self._send_json(payload)
+            return
+
+        if parsed.path == "/api/deploy-status":
+            self._send_json(deploy_status_response())
             return
 
         if parsed.path in {"/", "/admin", "/admin/"}:
@@ -1777,6 +2078,16 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             self._send_json({"ok": True, "instance": instance})
             return
 
+        if parsed.path == "/api/ui-log":
+            body = self._read_json_body()
+            message = body.get("message") if isinstance(body, dict) else None
+            if not isinstance(message, str) or not message.strip():
+                self.send_error(HTTPStatus.BAD_REQUEST, "Missing message")
+                return
+            _append_ui_log(message.strip())
+            self._send_json({"ok": True, "log_path": str(LOG_PATH.relative_to(ROOT))})
+            return
+
         if parsed.path == "/api/preset-deploy":
             body = self._read_json_body()
             preset = body.get("preset") if isinstance(body, dict) else None
@@ -1786,6 +2097,7 @@ class DashboardHandler(SimpleHTTPRequestHandler):
             try:
                 payload = _start_preset_deploy(preset.strip())
             except FileNotFoundError:
+                _append_ui_log(f"Launch blocked: unknown preset {preset}.")
                 self.send_error(HTTPStatus.NOT_FOUND, "Unknown preset")
                 return
             self._send_json(payload)

@@ -2,54 +2,73 @@
   "image-server": {
     "preset": "image-server",
     "instance_id": "3be07d1fae884b429dec18f77f2e498b",
-    "ip": "129.80.95.129"
+    "ip": "129.80.95.129",
+    "port": 8080,
+    "health_path": "/health",
+    "service": ""
   },
   "image-server-v2": {
     "preset": "image-server-v2",
     "instance_id": "24799c7810d64aacbf5ebcf91b13ab18",
-    "ip": "129.153.231.97"
+    "ip": "129.153.231.97",
+    "port": 8080,
+    "health_path": "/health",
+    "service": ""
   },
   "image-server-v3": {
     "preset": "image-server-v3",
     "instance_id": "52df54ecaade4c5e973721c0fa55eede",
-    "ip": "129.213.91.253"
+    "ip": "129.213.91.253",
+    "port": 8080,
+    "health_path": "/health",
+    "service": ""
   },
   "image-server-v4": {
     "preset": "image-server-v4",
     "instance_id": "6197658dd16b404ea8dfc295516acb67",
-    "ip": "129.213.53.114"
+    "ip": "129.213.53.114",
+    "port": 8080,
+    "health_path": "/health",
+    "service": ""
   },
   "image-server-v5": {
     "preset": "image-server-v5",
     "instance_id": "fdcb7817044f4ea6ac6fb02435ab0b7a",
-    "ip": "129.213.24.39"
+    "ip": "129.213.24.39",
+    "port": 8080,
+    "health_path": "/health",
+    "service": ""
   },
   "image-server-v6": {
     "preset": "image-server-v6",
     "instance_id": "fb35f83421374b63a7200a6d409bc50e",
-    "ip": "129.153.129.237"
+    "ip": "129.153.129.237",
+    "port": 8080,
+    "health_path": "/health",
+    "service": ""
   },
   "image-server-v7": {
     "preset": "image-server-v7",
     "instance_id": "2aa6af92334248be9c54305136a39c19",
-    "ip": "150.136.209.123"
+    "ip": "150.136.209.123",
+    "port": 8080,
+    "health_path": "/health",
+    "service": ""
   },
   "image-server-v8": {
     "preset": "image-server-v8",
     "instance_id": "e3122493f880478f8c7ae091c1154734",
-    "ip": "129.80.235.165"
+    "ip": "129.80.235.165",
+    "port": 8080,
+    "health_path": "/health",
+    "service": ""
   },
   "image-server-v9": {
     "preset": "image-server-v9",
     "instance_id": "af815ab3239243339069d7ac3ca24ce0",
-    "ip": "129.213.93.85"
-  },
-  "ltx-worker-lambda": {
-    "preset": "ltx-worker-lambda",
-    "instance_id": "b4d3a682cc944860b19f08f228c9ea59",
-    "ip": "193.122.153.79",
-    "port": 8000,
+    "ip": "129.213.93.85",
+    "port": 8080,
     "health_path": "/health",
-    "service": "ltx-worker"
+    "service": ""
   }
 }
